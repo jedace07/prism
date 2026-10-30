@@ -3,8 +3,14 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const sharp = require('sharp');
-const { run: command, capabilities } = require('./decoder.cjs');
+const { promisify } = require('node:util');
+const execFile = promisify(require('node:child_process').execFile);
+const { DecodeService, getRuntimePath } = require('./decode-service.cjs');
+const command = (bin, args) => execFile(bin, args, { windowsHide: true });
+async function capabilities() {
+  const decoder = new DecodeService();
+  try { return await decoder.request('capabilities'); } finally { await decoder.close(); }
+}
 async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
   const checks = []; const errors = [];
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'prism-smoke-images-'));
@@ -33,15 +39,8 @@ async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
     assert.equal(await js('document.getElementById("error").hidden'), true, await js('document.getElementById("error-message").textContent'));
     checks.push('WebGL2 context initialized with explicit rendering diagnostics');
 
-    const width = 640, height = 400;
-    const bytes = Buffer.alloc(width * height * 4);
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      const c = y < height / 2 ? (x < width / 2 ? [255, 0, 0, 255] : [0, 255, 0, 255]) : (x < width / 2 ? [0, 0, 255, 255] : [255, 255, 255, 255]);
-      bytes.set(c, (y * width + x) * 4);
-    }
+    await execFile(getRuntimePath(), [path.join(__dirname, 'smoke-fixtures.cjs'), temp]);
     const image = path.join(temp, '01-quadrants.png');
-    await sharp(bytes, { raw: { width, height, channels: 4 } }).png().toFile(image);
-    const other = path.join(temp, '02-photo.webp'); await sharp(image).webp({ lossless: true }).toFile(other);
     const selection = await select(image);
     assert.deepEqual(await pixel(-100, 100), [255, 0, 0, 255]);
     assert.deepEqual(await pixel(100, 100), [0, 255, 0, 255]);

@@ -2,7 +2,7 @@
 
 The supported testing workflow builds on GitHub-hosted runners, with no local Builder or SDK installation. A green workflow run is the evidence that compilation and packaged decoder checks passed. Hardware GPU rendering still needs testing on a desktop.
 
-This manifest packages the app produced by `bun run package`. It targets **Linux x86_64**, Freedesktop **26.08**, and the matching Electron BaseApp. The app, Electron and Sharp are copied from `dist/Prism-linux-x64`; LibRaw, Imath, OpenEXR, Ghostscript and ImageMagick are built from checksum-pinned sources inside the SDK. JPEG XL, HEIF, JPEG, PNG, WebP, TIFF and other libraries come from the SDK/runtime.
+This manifest packages the app produced by `bun run package`. It targets **Linux x86_64**, Freedesktop **26.08**, and the matching Electron BaseApp. The app, Electron, bundled Bun decoder runtime and Sharp are copied from `dist/Prism-linux-x64`; LibRaw, Imath, OpenEXR, Ghostscript and ImageMagick are built from checksum-pinned sources inside the SDK. JPEG XL, HEIF, JPEG, PNG, WebP, TIFF and other libraries come from the SDK/runtime.
 
 ## Build on GitHub
 
@@ -17,7 +17,7 @@ The artifact contains `Prism-x86_64.flatpak`, `SHA256SUMS`, `build-info.json` an
 
 The workflow is deliberately manual during initial testing: it does not run on every push, publish a GitHub release, or deploy to Flathub. It uses read-only repository permissions, pinned action revisions and the Freedesktop 26.08 container on a disposable privileged Linux runner. The SDK and native build tools are confined to that runner.
 
-The runner installs dependencies from `bun.lock`, runs the existing decoder tests, then executes `bun run package` before building the manifest. A separate check starts Electron's embedded Node.js inside the **Platform runtime**, loads bundled Sharp, checks required ImageMagick readers, and exercises JPEG XL, EXR, PSD, JPEG 2000, QOI and PDF decoding. A missing required reader or broken codec fails the run. HEIC and RAW reader availability is checked, but actual HEVC and camera-file variants still need sample-file testing. GUI and hardware GPU tests do not run on this headless job.
+The runner installs dependencies from `bun.lock`, runs the existing decoder tests, then executes `bun run package` before building the manifest. A separate check starts Electron's embedded Node.js inside the **Platform runtime**, communicates with the bundled Bun decoder process over binary pipes, checks required ImageMagick readers, and exercises JPEG XL, EXR, PSD, JPEG 2000, QOI and PDF decoding. A missing required reader or broken codec fails the run. HEIC and RAW reader availability is checked, but actual HEVC and camera-file variants still need sample-file testing. Sharp stays outside the Electron process to avoid GLib symbol conflicts. GUI and hardware GPU tests do not run on this headless job.
 
 ## Install and test the artifact
 

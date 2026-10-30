@@ -1,10 +1,10 @@
 # Prism
 
-A local Electron image viewer. The image itself is drawn by WebGL2: decoded pixels are uploaded as GPU textures, and shaders perform drawing, zoom, pan, rotation and flipping. Image decoding uses CPU codecs in a background worker.
+A local Electron image viewer. The image itself is drawn by WebGL2: decoded pixels are uploaded as GPU textures, and shaders perform drawing, zoom, pan, rotation and flipping. Image decoding uses CPU codecs in an isolated Bun subprocess bundled with the application.
 
 ## Run
 
-Bun 1.4.4 or newer is the development runtime and package manager. No separate host Node.js or npm installation is required; Electron retains its own embedded Node.js runtime for the desktop app. On an image-based OS, keep JavaScript tools in Bun and native build dependencies inside Flatpak or a development container.
+Bun 1.4.4 or newer is the development runtime and package manager. No separate host Node.js or npm installation is required; Electron retains its own embedded Node.js runtime for the desktop app, and packages include Bun for native decoding. On an image-based OS, keep JavaScript tools in Bun and native build dependencies inside Flatpak or a development container.
 
 ```bash
 bun install --frozen-lockfile
@@ -80,7 +80,7 @@ bun run package
 ./dist/Prism-linux-x64/prism
 ```
 
-The packager targets the current OS and architecture. The output bundles Electron and Sharp, so it does not require system Bun or Node.js. Keep the entire output directory together. ImageMagick and its delegates remain optional system dependencies. Native bindings are left unpacked. Cross-platform source is included; Linux x64 is the platform validated here.
+The packager targets the current OS and architecture. The output bundles Electron, Bun and Sharp, so it does not require system Bun or Node.js. Keep the entire output directory together. ImageMagick and its delegates remain optional system dependencies. Native bindings are left unpacked. Cross-platform source is included; Linux x64 is the platform validated here.
 
 ## Flatpak
 
@@ -110,12 +110,12 @@ Bun runs the existing Node-compatible test suite, including its per-format subte
 
 The integration suite opens a real Electron window. It checks WebGL framebuffer pixel colors, shader transforms, pointer panning, thumbnails, navigation, metadata, SVG and specialist rasterization, animation playback, TIFF pages, context isolation and file-token authorization. It records GPU diagnostics and screenshots in `artifacts/`. The hardware suite passed on **NVIDIA GeForce RTX 3080**, using ANGLE / OpenGL ES 3.2, with software fallback disabled.
 
-Electron/Sharp may emit the upstream [Linux GLib compatibility warning](https://sharp.pixelplumbing.com/install/#electron-and-linux). SVG, animated GIF, TIFF and the tested raster formats passed in the actual Electron runtime on this machine.
+Native decoding runs in a separate Bun process to avoid the upstream [Electron/Sharp GLib conflict on Linux](https://sharp.pixelplumbing.com/install/#electron-and-linux). Raw pixels cross bounded binary pipes and are uploaded to Electron's WebGL2 canvas. The package includes Bun's upstream license notices in its runtime directory.
 
 ## Source
 
 - `src/main.cjs`: native window, file dialogs, file authorization and IPC.
-- `src/decoder.cjs`, `src/decode-worker.cjs`, `src/decode-service.cjs`: decoding and bounded background work.
+- `src/decoder.cjs`, `src/decode-worker.cjs`, `src/decode-service.cjs`: decoding and bounded work in a separate Bun process.
 - `src/renderer/gpu.js`: WebGL2 texture uploads and image shaders.
 - `src/renderer/animation.js`: frame decoding and timed GPU uploads.
 - `src/renderer/app.js`: browsing and viewer controls.

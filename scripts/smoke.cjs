@@ -13,6 +13,7 @@ const os = require('node:os');
   if (!hardware) args.push('--allow-software-rendering', '--use-angle=swiftshader');
   const env = { ...process.env, ELECTRON_ENABLE_LOGGING: '1' };
   delete env.ELECTRON_RUN_AS_NODE;
+  if (!binary) env.PRISM_DECODER_RUNTIME = process.execPath;
   const child = spawn(binary || require('electron'), args, { stdio: 'inherit', env });
   const timeout = setTimeout(() => { child.kill('SIGKILL'); }, 120000);
   child.on('error', error => { clearTimeout(timeout); console.error(error); process.exitCode = 1; });
