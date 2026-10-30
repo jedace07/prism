@@ -1,6 +1,6 @@
 {
   "name": "prism-image-viewer",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "description": "A local Electron image viewer with WebGL2 rendering and broad native decoding",
   "main": ".build/app/src/main.js",
@@ -17,16 +17,23 @@
     "flatpak:bundle": "bun scripts/flatpak.ts bundle",
     "flatpak:check": "bun scripts/flatpak.ts check",
     "typecheck": "bun node_modules/typescript/bin/tsc --noEmit",
-    "build": "bun scripts/build.ts"
+    "build": "bun scripts/build.ts",
+    "lint": "bun x --bun --no-install biome lint --error-on-warnings src scripts test",
+    "lint:fix": "bun x --bun --no-install biome lint --write src scripts test",
+    "format": "bun x --bun --no-install prettier --write .",
+    "format:check": "bun x --bun --no-install prettier --check .",
+    "check": "bun run lint && bun run format:check && bun run typecheck && bun scripts/check-version.ts"
   },
   "engines": {
     "bun": ">=1.4.4"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
     "@electron/packager": "^20.3.0",
     "@types/bun": "^1.4.4",
     "@types/dom-webcodecs": "^0.1.19",
     "electron": "^45.1.0",
+    "prettier": "^3.9.10",
     "typescript": "^7.0.2"
   },
   "trustedDependencies": [

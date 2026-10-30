@@ -1,0 +1,13 @@
+node_modules/
+.tools/
+.build/
+dist/
+artifacts/
+release-assets/
+.flatpak-builder/
+.flatpak-build/
+.flatpak-repo/
+bun.lock
+third_party/
+LICENSE
+release-notes.md

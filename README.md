@@ -8,7 +8,8 @@ The source, preload, renderer, decoder, scripts and tests are written in **TypeS
 
 ```sh
 bun install --frozen-lockfile
-bun run typecheck
+bun run check
+bun run test
 bun run start
 bun run start /path/to/photo.png
 ```
@@ -21,12 +22,12 @@ Build/package the application on GitHub runners, as described below. Unit tests 
 
 Hardware WebGL2 is required by default. The app disables Chromium's software rasterizer, checks its active renderer, and reports context loss. Click the GPU badge for device and format diagnostics. To explicitly permit software rendering for a remote desktop or test, pass `--allow-software-rendering`.
 
-| Decoder | Supported inputs |
-| --- | --- |
-| Bun.Image on Linux | JPEG, PNG, WebP, GIF, BMP |
+| Decoder                    | Supported inputs                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| Bun.Image on Linux         | JPEG, PNG, WebP, GIF, BMP                                                                 |
 | Bun.Image on macOS/Windows | The common formats above, plus TIFF/HEIC/AVIF when the OS backend and codecs provide them |
-| Chromium fallback | SVG, icons, AVIF and other formats supported by that Chromium build |
-| Chromium animation | GIF, animated WebP, APNG and AVIF where supported |
+| Chromium fallback          | SVG, icons, AVIF and other formats supported by that Chromium build                       |
+| Chromium animation         | GIF, animated WebP, APNG and AVIF where supported                                         |
 
 See [Bun.Image's platform matrix](https://bun.com/docs/runtime/image#platform-backends). The in-app diagnostics distinguish Bun's portable formats, optional system formats, and queried browser formats. Unsupported files show an error; there is no suggestion to install host codecs.
 
@@ -36,41 +37,55 @@ Bun applies JPEG EXIF orientation before sizing. Input images are limited to 268
 
 ## Controls
 
-| Action | Shortcut |
-| --- | --- |
-| Open images / folder | Ctrl+O / Ctrl+Shift+O |
-| Previous / next image | Left / Right |
-| Zoom at cursor / pan | Wheel / drag |
-| Fit / actual size | 0 / 1 |
-| Toggle fit and actual size | Double-click |
-| Zoom in / out | + / − |
-| Rotate clockwise / counterclockwise | R / Shift+R |
-| Flip horizontally | H |
-| Pixel sampling / background | P / B |
-| Previous / next animation frame | Page Up / Page Down |
-| Play/pause animation or 4-second slideshow | Space |
-| Information / fullscreen | I / F |
-| Stop playback / dismiss error | Escape |
+| Action                                     | Shortcut              |
+| ------------------------------------------ | --------------------- |
+| Open images / folder                       | Ctrl+O / Ctrl+Shift+O |
+| Previous / next image                      | Left / Right          |
+| Zoom at cursor / pan                       | Wheel / drag          |
+| Fit / actual size                          | 0 / 1                 |
+| Toggle fit and actual size                 | Double-click          |
+| Zoom in / out                              | + / −                 |
+| Rotate clockwise / counterclockwise        | R / Shift+R           |
+| Flip horizontally                          | H                     |
+| Pixel sampling / background                | P / B                 |
+| Previous / next animation frame            | Page Up / Page Down   |
+| Play/pause animation or 4-second slideshow | Space                 |
+| Information / fullscreen                   | I / F                 |
+| Stop playback / dismiss error              | Escape                |
 
 Use Command in place of Ctrl on macOS.
 
-## GitHub test artifacts
+## Downloads
 
-Open **Actions → Build Linux Flatpak → Run workflow**. The workflow installs locked dependencies with Bun, checks TypeScript, runs unit and WebGL smoke tests, prepares Electron and the bundled Bun runtime, packages the Flatpak, and verifies its decoder subprocess in the Platform runtime. The manifest only copies the prepared application and desktop files; it compiles no image dependencies.
+Download versioned builds from [GitHub Releases](https://github.com/jedace07/prism/releases). The first release is **0.1.0-alpha.1**, published as a prerelease while Prism is early in development.
 
-Download and extract `Prism-linux-flatpak-x86_64-<run number>` from a successful run:
+- **Windows x64:** extract `Prism-0.1.0-alpha.1-windows-x64.zip` and open `Prism-win32-x64/prism.exe`. Keep the entire application folder together. Electron and Bun are bundled; no runtime installation is required. This is an unsigned portable build.
+- **Linux x86_64:** download `Prism-0.1.0-alpha.1-linux-x86_64.flatpak` and install it:
 
 ```sh
-sha256sum -c SHA256SUMS
-flatpak install --system ./Prism-x86_64.flatpak
+flatpak install --system ./Prism-0.1.0-alpha.1-linux-x86_64.flatpak
 flatpak run --system io.github.prismviewer.Prism
 ```
 
-Installations default to the system scope and use its Flathub remote. To deliberately install per user, replace `--system` with `--user`; that scope needs its own runtime/remote setup.
+The release includes `SHA256SUMS` and platform build information. Download all listed assets to check the complete set with `sha256sum -c SHA256SUMS`, or check the relevant line for a single download. System Flatpak installs use the system Flathub remote; an explicit `--user` installation needs its own runtime/remote setup. Hardware rendering should be checked on your own desktop using the GPU diagnostics.
 
-The artifact includes the bundle, checksum, source/build information and decoder report, and expires after 14 days. Test hardware GPU rendering on your own desktop using the GPU diagnostics. Runner WebGL tests explicitly use software rendering; they verify pixels and interactions, not physical GPU acceleration.
+## CI and prereleases
 
-The [workflow](.github/workflows/build-flatpak.yml) is manually triggered and reusable by a future Windows/macOS/Linux release pipeline. Windows portable builds are available separately below. macOS builds and automatic releases are not enabled yet. See [Flatpak details](flatpak/README.md).
+[CI](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. Linux and Windows both check Biome linting, Prettier formatting, strict TypeScript, version consistency and unit tests. Use `bun run format` to format source and `bun run lint:fix` for safe lint fixes. All control-flow bodies use braces; TypeScript strings use single quotes where appropriate. Your ES2025 target is retained.
+
+The [prerelease workflow](.github/workflows/release.yml) starts when a `v<version>` tag is pushed. It validates the tag against `package.json`, AppStream and the changelog, then calls the reusable [Linux](.github/workflows/build-flatpak.yml) and [Windows](.github/workflows/build-windows.yml) build workflows. Each build repeats the quality checks, packages the app, and verifies the bundled decoder and software WebGL renderer on its native runner. Windows uses Server 2025; Linux uses Ubuntu 26.04 with Freedesktop 26.08 for Flatpak.
+
+Publication waits for both platforms. It checks asset names, versions and source commits, generates SHA-256 checksums, uploads everything to a draft, then publishes a **prerelease**. Published releases are never overwritten. Only the publication job has repository write permission. No custom secrets are needed; artifact actions use GitHub's supported Node 24 LTS runtime, while project tooling uses Bun.
+
+For the next release, update `package.json` with a new semantic version (for example `0.1.0-alpha.2`), add the matching newest AppStream release and a `## <version> - YYYY-MM-DD` changelog section, then run checks and commit/push the changes. Tag that commit:
+
+```sh
+prism_version=$(bun -p "require('./package.json').version")
+git tag -s "v$prism_version" -m "Prism $prism_version"
+git push origin "v$prism_version"
+```
+
+Both platform build workflows can also be run manually for development checks. Actions artifacts hold intermediate distributions and test evidence for seven days; user downloads are published under Releases. macOS packaging and stable-release promotion remain future work. See [Flatpak details](flatpak/README.md).
 
 ## Verification and source
 

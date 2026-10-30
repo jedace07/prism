@@ -1,0 +1,87 @@
+name: Prerelease
+
+on:
+  push:
+    tags: ['v[0-9]*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Validate release version
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Bun from package.json
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: Validate tag, package and AppStream version
+        id: version
+        run: bun scripts/check-version.ts
+
+  linux:
+    needs: version
+    uses: ./.github/workflows/build-flatpak.yml
+
+  windows:
+    needs: version
+    uses: ./.github/workflows/build-windows.yml
+
+  publish:
+    name: Publish verified prerelease
+    needs: [version, linux, windows]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ needs.version.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Bun from package.json
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      - name: Download distributions from this release run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2, Node 24 LTS
+        with:
+          pattern: dist-*
+          path: release-assets/
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Verify assets and generate checksums and release notes
+        run: bun scripts/verify-release.ts
+      - name: Upload to a draft and publish as prerelease
+        shell: bash
+        run: |
+          if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft > release-state.txt 2>/dev/null; then
+            if [ "$(cat release-state.txt)" != 'true' ]; then
+              echo 'Refusing to overwrite an already published release.' >&2
+              exit 1
+            fi
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --verify-tag --target "$GITHUB_SHA" --draft --prerelease --latest=false \
+              --title "Prism $RELEASE_VERSION" --notes-file release-notes.md
+          fi
+          find release-assets -maxdepth 1 -type f -printf '%f\n' | sort > expected-assets.txt
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | sort > uploaded-assets.txt
+          diff -u expected-assets.txt uploaded-assets.txt
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false \
+            --title "Prism $RELEASE_VERSION" --notes-file release-notes.md

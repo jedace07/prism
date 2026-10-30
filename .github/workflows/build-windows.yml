@@ -1,8 +1,7 @@
-name: Build Windows test app
+name: Build Windows portable app
 
 on:
   workflow_dispatch:
-  # Callable alongside the Flatpak job in a future release pipeline.
   workflow_call:
 
 permissions:
@@ -25,58 +24,42 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-
       - name: Set up Bun from package.json
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
-
-      - name: Check TypeScript
-        run: bun run typecheck
-
-      - name: Run decoder tests
+      - name: Check source and version
+        run: bun run check
+      - name: Run unit tests
         run: bun run test
-
       - name: Prepare Electron application
         run: bun run package
-
       - name: Verify the bundled decoder runtime
         run: bun scripts/verify-portable.ts ./dist/Prism-win32-x64/prism.exe
-
       - name: Verify WebGL previews and browser fallbacks
         timeout-minutes: 5
         env:
           PRISM_SMOKE_EXECUTABLE: ${{ github.workspace }}/dist/Prism-win32-x64/prism.exe
         run: bun run test:smoke
-
-      - name: Collect portable app and build information
-        run: |
-          Copy-Item -Path ./dist/Prism-win32-x64 -Destination ./artifacts/Prism-win32-x64 -Recurse
-          bun -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,repository:process.env.GITHUB_REPOSITORY,run:`${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,bun:process.versions.bun,electron:require("electron/package.json").version,platform:process.platform,architecture:process.arch,runnerImage:process.env.ImageOS,runnerImageVersion:process.env.ImageVersion},null,2))' | Set-Content -Encoding utf8 ./artifacts/build-info.json
-          if ($LASTEXITCODE -ne 0) { throw 'Could not record build information.' }
-
-      - name: Upload test artifact
-        id: artifact
+      - name: Archive portable application
+        run: Compress-Archive -Path ./dist/Prism-win32-x64 -DestinationPath ./Prism-windows-x64.zip -CompressionLevel Optimal
+      - name: Prepare versioned distribution
+        run: bun scripts/prepare-artifacts.ts
+      - name: Upload distribution for release assembly
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24 LTS
         with:
-          name: Prism-windows-x64-${{ github.run_number }}
-          path: artifacts/
+          name: dist-windows
+          path: release-assets/
           if-no-files-found: error
-          retention-days: 14
-          compression-level: 6
-
-      - name: Write download instructions
-        env:
-          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
-        run: |
-          $instructions = @'
-          ### Windows app ready for testing
-
-          [Download the artifact](ARTIFACT_URL_TOKEN), extract the entire ZIP, then open `Prism-win32-x64/prism.exe`.
-
-          Keep all files in the application directory together. Bun and Electron are bundled; no runtime installation is required. This is a portable test build, not an installer.
-
-          Decoder and software WebGL smoke checks passed on Windows Server 2025. Check hardware GPU rendering on your own desktop using the in-app GPU diagnostics.
-          '@
-          $instructions.Replace('ARTIFACT_URL_TOKEN', $env:ARTIFACT_URL) | Add-Content -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node 24 LTS
+        with:
+          name: test-evidence-windows
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true

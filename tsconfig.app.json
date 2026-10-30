@@ -7,10 +7,6 @@
     "rootDir": "src",
     "outDir": ".build/app/src"
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "src/renderer"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/renderer"]
 }

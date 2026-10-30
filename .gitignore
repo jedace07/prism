@@ -7,3 +7,5 @@ artifacts/
 .flatpak-build/
 .flatpak-repo/
 .build/
+release-assets/
+release-notes.md

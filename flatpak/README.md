@@ -1,51 +1,40 @@
-# Flatpak test artifacts
+# Linux Flatpak
 
-Builds run on GitHub-hosted runners. You do not need a local Builder, SDK, compiler or image-tool installation to test an artifact.
+## Install a prerelease
 
-## Build and download
-
-1. Open [Actions → Build Linux Flatpak](https://github.com/jedace07/prism/actions/workflows/build-flatpak.yml).
-2. Select **Run workflow** and a branch.
-3. Download `Prism-linux-flatpak-x86_64-<run number>` from the successful run and extract it.
-
-The ZIP contains `Prism-x86_64.flatpak`, `SHA256SUMS`, `build-info.json` and `flatpak-capabilities.json`, plus test evidence where generated. Artifacts remain available for 14 days. Build information records the source commit, workflow URL, Bun/Electron versions, runtime and architecture. No custom secrets are required.
-
-The workflow is manual and reusable through `workflow_call`. It uses pinned action revisions, read-only repository permissions and the Freedesktop 26.08 container on a disposable privileged runner. It does not publish releases or deploy to Flathub.
-
-## Dependencies and verification
-
-All application and development dependencies are managed by **Bun**. Image decoding uses the built-in **Bun.Image** API, with no Sharp or other image package. The manifest has a single application module: it copies the Bun-prepared Electron app, bundled Bun runtime, licenses and desktop files. It does not download or compile ImageMagick, LibRaw, Imath, OpenEXR, Ghostscript, or codec libraries.
-
-Freedesktop Platform/SDK and Electron BaseApp provide Flatpak infrastructure, including Zypak; those prebuilt refs are not Bun packages. Keep their branches aligned at 26.08. The build only targets Linux x86_64 at present.
-
-The runner checks TypeScript in strict mode and performs unit tests, then a software-WebGL desktop smoke test under Xvfb. It checks PNG texture colors, transformations, SVG fallback, thumbnails and GIF playback. SwiftShader is explicitly enabled for this test. Because the disposable CI container runs as root, the smoke runner passes `--no-sandbox` only in that environment; the shipped launcher does not pass it.
-
-After Flatpak packaging, a separate check starts Electron's embedded Node inside the **Platform runtime**, communicates with the bundled Bun decoder, and checks JPEG/PNG/WebP/GIF/BMP pixels, alpha, orientation and PNG transport. Failed checks block artifact upload. The in-app GPU badge must still be checked on a real desktop to validate hardware rendering.
-
-## Install and test
-
-From the extracted artifact directory:
+Download the versioned `.flatpak` from [GitHub Releases](https://github.com/jedace07/prism/releases), together with `SHA256SUMS` if you want to verify its checksum. The initial version is `0.1.0-alpha.1`.
 
 ```sh
-sha256sum -c SHA256SUMS
-flatpak install --system ./Prism-x86_64.flatpak
+flatpak install --system ./Prism-0.1.0-alpha.1-linux-x86_64.flatpak
 flatpak run --system io.github.prismviewer.Prism
 ```
 
-Installation defaults to **system** scope, so the runtime is resolved using the system Flathub remote. If it is missing, add it explicitly with `flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`. A per-user installation remains possible by choosing `--user`, but needs its own runtime/remote setup.
+Installation defaults to system scope and uses its Flathub remote. If it is missing, add it explicitly with `flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`. A per-user installation remains possible with `--user`, using that scope's own runtime and remote setup.
 
-Linux Bun.Image supports JPEG, PNG, WebP, GIF and BMP. Chromium adds SVG/icons and formats such as AVIF when supported by its build. HEIC/TIFF support in Bun.Image is OS-dependent on macOS/Windows, not available in Linux Flatpak through host codec installs. RAW, PSD, EXR, JPEG 2000, PDF and multipage document support were removed with the previous decoder stack. The UI reports actual backend/platform capabilities rather than advertising those formats.
+## Build and release workflow
 
-## Sandbox
+Builds run on GitHub-hosted Ubuntu 26.04 runners in the Freedesktop 26.08 container. You do not need a local Builder, SDK, compiler or image-tool installation. The manual, reusable `build-flatpak.yml` workflow checks lint, formatting, strict types, version consistency and unit tests, packages Electron with Bun, exercises its renderer under Xvfb, and assembles the Flatpak.
 
-The launcher uses Zypak and keeps Electron process isolation. Permissions include GPU devices, Wayland/fallback X11, shared IPC, and read-only Pictures access. Other files/folders use the desktop chooser portal; selecting a folder grants sibling browsing access. Drag and drop requires paths accessible to the sandbox. There is no network, blanket home, host spawn, audio or filesystem-write permission.
+A tagged `v<version>` release calls that build alongside Windows. The publisher waits for both builds, checks their commit and version information, and publishes the versioned distributions and checksums as a GitHub prerelease. `package.json`, the newest AppStream release and the changelog must agree. The application also reports its version in GPU diagnostics.
 
-The Bun worker runs within the same Flatpak sandbox and only receives paths authorized by Electron's file-token registry. Constructor pixel limits, preview budgets and bounded IPC messages remain enforced. No native image-tool executables are invoked.
+Intermediate `dist-linux` and `test-evidence-linux` Actions artifacts expire after seven days. The latter holds decoder reports and renderer screenshots for debugging. Installable downloads are published as release assets. See the root README for the version/tag procedure.
 
-## Later targets and optional reproduction
+## Dependencies and verification
 
-A future release workflow can call `build-flatpak.yml` alongside the existing `build-windows.yml` and a future macOS job. Build each native target on its corresponding runner using `bun install --frozen-lockfile`, tests and `bun run package`; the packager bundles the current platform's Bun runtime. Native codec availability, signing/notarization and release triggers need separate target-specific work.
+All application and development dependencies use Bun. Image decoding uses built-in Bun.Image without Sharp or an external image package. The manifest's single application module copies the prepared Electron app, bundled Bun runtime, licenses and desktop files; it compiles no image libraries.
 
-Local builds are optional and must be explicitly requested on the image-based development machine. Existing `bun run flatpak:build` and `bun run flatpak:bundle` scripts remain available for reproduction with a preinstalled Flatpak Builder. No local build is required for the GitHub workflow. The reproduction script defaults to system build dependencies; set `PRISM_FLATPAK_SCOPE=user` only when deliberately using a user remote.
+Freedesktop Platform/SDK and Electron BaseApp provide Flatpak infrastructure, including Zypak. These are prebuilt Flatpak refs rather than Bun packages, with their branches aligned at 26.08.
 
-This remains a local-artifact packaging manifest rather than a Flathub submission: application code enters as `dist/Prism-linux-x64`, prepared from `bun.lock` on the runner. Before public distribution, use an owned app ID, add project URLs/screenshots, and use a versioned release artifact or an offline source build.
+The desktop smoke test explicitly allows SwiftShader under Xvfb and checks WebGL pixels, transformations, thumbnails, SVG fallback, GIF playback and renderer isolation. Only the disposable root CI smoke test uses `--no-sandbox`; the shipped launcher keeps sandboxing. A separate check runs Electron's embedded Node inside the Platform runtime and verifies the bundled Bun decoder's pixels, alpha, orientation and PNG transport. Hardware acceleration still needs verification on a real desktop.
+
+Linux Bun.Image supports JPEG, PNG, WebP, GIF and BMP. Chromium adds SVG/icons and supported formats such as AVIF. HEIC/TIFF support in Bun.Image depends on macOS/Windows codecs; host codec installs do not add them to this Linux Flatpak. RAW, PSD, EXR, JPEG 2000, PDF and multipage document decoding are not provided.
+
+## Sandbox and optional reproduction
+
+The launcher uses Zypak and Electron isolation. Permissions include GPU devices, Wayland/fallback X11, shared IPC and read-only Pictures access. Other files and folders use the chooser portal; drag and drop requires accessible sandbox paths. There is no network, blanket home, host spawn, audio or filesystem-write permission.
+
+The Bun worker stays in the Flatpak sandbox and receives only paths authorized by Electron's file-token registry. Pixel limits, preview budgets and bounded IPC messages remain enforced.
+
+Optional local reproduction uses `bun run flatpak:build` and `bun run flatpak:bundle` with a preinstalled Flatpak Builder, only when explicitly requested on the image-based development machine. Build dependencies default to system scope; `PRISM_FLATPAK_SCOPE=user` selects user scope. CI does not require host package installs.
+
+This is a local application packaging manifest rather than a Flathub submission. Application code enters as `dist/Prism-linux-x64`, prepared from `bun.lock` on the runner. A future Flathub submission needs an owned app ID, project URLs/screenshots and a source-build or versioned release input.

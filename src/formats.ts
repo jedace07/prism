@@ -6,5 +6,7 @@ const browser = 'svg avif ico cur jxl'.split(' ');
 const system = process.platform === 'linux' ? [] : 'tif tiff heic heif hif'.split(' ');
 const EXTENSIONS = [...new Set([...portable, ...browser, ...system])];
 const EXTENSION_SET = new Set(EXTENSIONS);
-function isImage(file: string) { return EXTENSION_SET.has(path.extname(file).slice(1).toLowerCase()); }
+function isImage(file: string) {
+  return EXTENSION_SET.has(path.extname(file).slice(1).toLowerCase());
+}
 export { EXTENSIONS, isImage };

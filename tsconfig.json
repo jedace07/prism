@@ -3,23 +3,12 @@
     "target": "ES2025",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": [
-      "ES2025",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "types": [
-      "bun",
-      "dom-webcodecs"
-    ],
+    "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    "types": ["bun", "dom-webcodecs"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": [
-    "src/**/*.ts",
-    "scripts/**/*.ts",
-    "test/**/*.ts"
-  ]
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"]
 }
