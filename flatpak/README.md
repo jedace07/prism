@@ -5,8 +5,8 @@
 Download the versioned `.flatpak` from [GitHub Releases](https://github.com/jedace07/prism/releases), together with `SHA256SUMS` if you want to verify its checksum. The initial version is `0.1.0-alpha.1`.
 
 ```sh
-flatpak install --system ./Prism-0.1.0-alpha.1-linux-x86_64.flatpak
-flatpak run --system io.github.prismviewer.Prism
+flatpak install ./Prism-0.1.0-alpha.1-linux-x86_64.flatpak
+flatpak run io.github.prismviewer.Prism
 ```
 
 Installation defaults to system scope and uses its Flathub remote. If it is missing, add it explicitly with `flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`. A per-user installation remains possible with `--user`, using that scope's own runtime and remote setup.

@@ -4,7 +4,7 @@ A local Electron image viewer. Bun.Image decodes and resizes previews in the bun
 
 ## Development
 
-The source, preload, renderer, decoder, scripts and tests are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts. No separate host Node.js, compiler, Sharp or ImageMagick installation is required.
+The source, preload, renderer, decoder, scripts and tests are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts. 
 
 ```sh
 bun install --frozen-lockfile
@@ -68,24 +68,6 @@ flatpak run --system io.github.prismviewer.Prism
 ```
 
 The release includes `SHA256SUMS` and platform build information. Download all listed assets to check the complete set with `sha256sum -c SHA256SUMS`, or check the relevant line for a single download. System Flatpak installs use the system Flathub remote; an explicit `--user` installation needs its own runtime/remote setup. Hardware rendering should be checked on your own desktop using the GPU diagnostics.
-
-## CI and prereleases
-
-[CI](.github/workflows/ci.yml) runs on pushes to `main` and pull requests. Linux and Windows both check Biome linting, Prettier formatting, strict TypeScript, version consistency and unit tests. Use `bun run format` to format source and `bun run lint:fix` for safe lint fixes. All control-flow bodies use braces; TypeScript strings use single quotes where appropriate. Your ES2025 target is retained.
-
-The [prerelease workflow](.github/workflows/release.yml) starts when a `v<version>` tag is pushed. It validates the tag against `package.json`, AppStream and the changelog, then calls the reusable [Linux](.github/workflows/build-flatpak.yml) and [Windows](.github/workflows/build-windows.yml) build workflows. Each build repeats the quality checks, packages the app, and verifies the bundled decoder and software WebGL renderer on its native runner. Windows uses Server 2025; Linux uses Ubuntu 26.04 with Freedesktop 26.08 for Flatpak.
-
-Publication waits for both platforms. It checks asset names, versions and source commits, generates SHA-256 checksums, uploads everything to a draft, then publishes a **prerelease**. Published releases are never overwritten. Only the publication job has repository write permission. No custom secrets are needed; artifact actions use GitHub's supported Node 24 LTS runtime, while project tooling uses Bun.
-
-For the next release, update `package.json` with a new semantic version (for example `0.1.0-alpha.2`), add the matching newest AppStream release and a `## <version> - YYYY-MM-DD` changelog section, then run checks and commit/push the changes. Tag that commit:
-
-```sh
-prism_version=$(bun -p "require('./package.json').version")
-git tag -s "v$prism_version" -m "Prism $prism_version"
-git push origin "v$prism_version"
-```
-
-Both platform build workflows can also be run manually for development checks. Actions artifacts hold intermediate distributions and test evidence for seven days; user downloads are published under Releases. macOS packaging and stable-release promotion remain future work. See [Flatpak details](flatpak/README.md).
 
 ## Verification and source
 
