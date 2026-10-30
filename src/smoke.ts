@@ -54,6 +54,8 @@ async function run({ window, choosePaths, gpuInfo, reportPath, app }: {
     await click('rotate'); assert.deepEqual(await pixel(-100, 100), [0, 0, 255, 255]);
     for (let i = 0; i < 3; i++) await click('rotate');
     await click('flip'); assert.deepEqual(await pixel(-100, 100), [0, 255, 0, 255]); await click('flip');
+    // Desktop work areas and DPI can make the initial fit smaller than 100%.
+    await click('zoom-value'); assert.equal(await js('document.getElementById("zoom-value").textContent'), '100%');
     await click('zoom-in'); assert.equal(await js('document.getElementById("zoom-value").textContent'), '125%');
     await click('zoom-value'); assert.equal(await js('document.getElementById("zoom-value").textContent'), '100%');
     await click('pixel'); assert.equal(await js('document.getElementById("pixel").getAttribute("aria-pressed")'), 'true');
