@@ -1,6 +1,6 @@
 # Prism
 
-A local Electron image viewer. Bun.Image decodes and resizes previews in the bundled Bun subprocess; Chromium turns the encoded PNG into a bitmap and uploads it to WebGL2. Drawing, zoom, pan, rotation, flipping and sampling use GPU shaders. There are no external image packages or image-tool executables.
+A local Electron image viewer. Bun.Image decodes and resizes previews in the bundled Bun subprocess; Chromium turns the encoded PNG into a bitmap and uploads it to WebGPU. Drawing, zoom, pan, rotation, flipping and sampling use GPU shaders. There are no external image packages or image-tool executables.
 
 ## Development
 
@@ -19,7 +19,7 @@ Build/package the application on GitHub runners, as described below. Unit tests 
 
 ## Rendering and formats
 
-Hardware WebGL2 is required by default. The app disables Chromium's software rasterizer, checks its active renderer, and reports context loss. Click the GPU badge for device and format diagnostics. To explicitly permit software rendering for a remote desktop or test, pass `--allow-software-rendering`.
+Hardware WebGPU is required by default. The app disables Chromium's software rasterizer, rejects fallback/software WebGPU adapters, and reports device loss. Click the GPU badge for device and format diagnostics. To explicitly permit software rendering for a remote desktop or test, pass `--allow-software-rendering`.
 
 | Decoder | Supported inputs |
 | --- | --- |
@@ -33,6 +33,10 @@ See [Bun.Image's platform matrix](https://bun.com/docs/runtime/image#platform-ba
 **ImageMagick and Sharp have been removed.** Specialist formats such as camera RAW, PSD, EXR, JPEG 2000 and PDF are no longer provided. Bun.Image decodes the first image only; multipage TIFF/PDF navigation is not supported. Animation frame controls use Chromium.
 
 Bun applies JPEG EXIF orientation before sizing. Input images are limited to 268,435,456 pixels. Previews fit both the GPU texture limit and a 32-megapixel budget; reduced previews are labeled. Bun emits an encoded PNG, and Chromium manages color when creating the GPU bitmap. The inspector reports output depth rather than implying that Bun exposes source color-profile metadata. This is an 8-bit viewer, not an HDR mastering tool. Browser-only inputs and animation originals are limited to 64 MiB. Viewing never writes to source files.
+
+Linux availability depends on Chromium's supported GPU/driver set. If no adapter is available, update the driver first. `--experimental-webgpu` explicitly enables Chromium's experimental WebGPU/Vulkan path for Linux drivers outside that set; it still requires a hardware adapter unless `--allow-software-rendering` is also selected. There is no WebGL rendering fallback. See [WebGPU implementation status](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status).
+
+The UI loads from the secure, local `prism://viewer` origin. Only shipped renderer assets are served by that protocol; local images continue to use authorized IPC file tokens.
 
 ## Controls
 
@@ -56,7 +60,7 @@ Use Command in place of Ctrl on macOS.
 
 ## GitHub test artifacts
 
-Open **Actions → Build Linux Flatpak → Run workflow**. The workflow installs locked dependencies with Bun, checks TypeScript, runs unit and WebGL smoke tests, prepares Electron and the bundled Bun runtime, packages the Flatpak, and verifies its decoder subprocess in the Platform runtime. The manifest only copies the prepared application and desktop files; it compiles no image dependencies.
+Open **Actions → Build Linux Flatpak → Run workflow**. The workflow installs locked dependencies with Bun, checks TypeScript, runs unit and WebGPU smoke tests on Ubuntu 26.04, prepares Electron and the bundled Bun runtime, packages the Flatpak, and verifies its decoder subprocess in the Platform runtime. The manifest only copies the prepared application and desktop files; it compiles no image dependencies.
 
 Download and extract `Prism-linux-flatpak-x86_64-<run number>` from a successful run:
 
@@ -68,7 +72,7 @@ flatpak run --system io.github.prismviewer.Prism
 
 Installations default to the system scope and use its Flathub remote. To deliberately install per user, replace `--system` with `--user`; that scope needs its own runtime/remote setup.
 
-The artifact includes the bundle, checksum, source/build information and decoder report, and expires after 14 days. Test hardware GPU rendering on your own desktop using the GPU diagnostics. Runner WebGL tests explicitly use software rendering; they verify pixels and interactions, not physical GPU acceleration.
+The artifact includes the bundle, checksum, source/build information and decoder report, and expires after 14 days. Test hardware GPU rendering on your own desktop using the GPU diagnostics. Runner WebGPU tests explicitly use software rendering; they verify pixels and interactions, not physical GPU acceleration.
 
 The [workflow](.github/workflows/build-flatpak.yml) is manually triggered and reusable by a future Windows/macOS/Linux release pipeline. Native Windows/macOS builds and automatic releases are not enabled yet. See [Flatpak details](flatpak/README.md).
 
@@ -81,11 +85,11 @@ bun run test:smoke
 PRISM_SMOKE_HARDWARE=1 bun run test:smoke
 ```
 
-Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP decoding, literal filenames, size limits, unsupported formats, and the subprocess protocol. Desktop tests exercise WebGL pixels and transforms, thumbnails, SVG fallback, GIF playback, file navigation and renderer isolation. CI uses Xvfb and explicit SwiftShader; only its disposable root smoke test disables Chromium's root-user sandbox check. Normal launches retain sandboxing and use Zypak inside Flatpak.
+Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP decoding, literal filenames, size limits, unsupported formats, and the subprocess protocol. Desktop tests exercise WebGPU readback pixels, alpha composition, texture filtering, resizing, device loss and transforms, thumbnails, SVG fallback, GIF playback, file navigation and renderer isolation. CI uses Xvfb and explicit SwiftShader WebGPU; only its disposable root smoke test disables Chromium's root-user sandbox check. Normal launches retain sandboxing and use Zypak inside Flatpak.
 
 - `src/decoder.ts`: Bun.Image previews and capabilities.
 - `src/decode-service.ts`, `src/decode-worker.ts`, `src/decoder-protocol.ts`: bounded subprocess work and binary PNG transport.
-- `src/renderer/gpu.ts`: WebGL2 texture uploads and shaders.
+- `src/renderer/gpu.ts`: WebGPU textures, WGSL shaders, render passes and GPU readback for CI.
 - `src/renderer/browser-images.ts`: bitmap creation and browser-only formats.
 - `src/renderer/animation.ts`: Chromium frame decoding and timed texture uploads.
 

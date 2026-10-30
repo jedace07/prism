@@ -10,7 +10,7 @@ Builds run on GitHub-hosted runners. You do not need a local Builder, SDK, compi
 
 The ZIP contains `Prism-x86_64.flatpak`, `SHA256SUMS`, `build-info.json` and `flatpak-capabilities.json`, plus test evidence where generated. Artifacts remain available for 14 days. Build information records the source commit, workflow URL, Bun/Electron versions, runtime and architecture. No custom secrets are required.
 
-The workflow is manual and reusable through `workflow_call`. It uses pinned action revisions, read-only repository permissions and the Freedesktop 26.08 container on a disposable privileged runner. It does not publish releases or deploy to Flathub.
+The workflow is manual and reusable through `workflow_call`. It uses pinned action revisions, read-only repository permissions and the Freedesktop 26.08 container on a disposable privileged Ubuntu 26.04 runner. It does not publish releases or deploy to Flathub.
 
 ## Dependencies and verification
 
@@ -18,9 +18,9 @@ All application and development dependencies are managed by **Bun**. Image decod
 
 Freedesktop Platform/SDK and Electron BaseApp provide Flatpak infrastructure, including Zypak; those prebuilt refs are not Bun packages. Keep their branches aligned at 26.08. The build only targets Linux x86_64 at present.
 
-The runner checks TypeScript in strict mode and performs unit tests, then a software-WebGL desktop smoke test under Xvfb. It checks PNG texture colors, transformations, SVG fallback, thumbnails and GIF playback. SwiftShader is explicitly enabled for this test. Because the disposable CI container runs as root, the smoke runner passes `--no-sandbox` only in that environment; the shipped launcher does not pass it.
+The runner checks TypeScript in strict mode and performs unit tests, then a software WebGPU desktop smoke test under Xvfb. It checks PNG texture colors, transformations, SVG fallback, thumbnails and GIF playback. The test explicitly selects the SwiftShader WebGPU adapter. It reads actual GPU render-target pixels into mapped buffers and checks device-loss handling. It does not validate physical GPU performance. Because the disposable CI container runs as root, the smoke runner passes `--no-sandbox` only in that environment; the shipped launcher does not pass it.
 
-After Flatpak packaging, a separate check starts Electron's embedded Node inside the **Platform runtime**, communicates with the bundled Bun decoder, and checks JPEG/PNG/WebP/GIF/BMP pixels, alpha, orientation and PNG transport. Failed checks block artifact upload. The in-app GPU badge must still be checked on a real desktop to validate hardware rendering.
+After Flatpak packaging, a separate check starts Electron's embedded Node inside the **Platform runtime**, communicates with the bundled Bun decoder, and checks JPEG/PNG/WebP/GIF/BMP pixels, alpha, orientation and PNG transport. Failed checks block artifact upload. The in-app GPU badge must still be checked on a real desktop to validate hardware rendering. Linux driver support varies; `--experimental-webgpu` is an explicit opt-in for Chromium’s experimental Vulkan path. The Freedesktop runtime remains 26.08; the Ubuntu runner host version is separate from the Flatpak runtime.
 
 ## Install and test
 

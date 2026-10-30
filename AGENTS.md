@@ -8,3 +8,5 @@
 
 - Write application code, scripts and tests in TypeScript. Keep strict type checking in CI; Electron runs emitted JavaScript from `.build/app`, while Bun runs development scripts and unit tests directly.
 - License project-owned code under Apache-2.0; preserve bundled third-party notices.
+
+- Render images with WebGPU/WGSL, and reject software adapters by default. Keep experimental Linux driver support and software CI adapters explicit. Use the secure local app protocol and preserve the file-token IPC boundary.

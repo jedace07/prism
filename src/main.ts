@@ -1,19 +1,31 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ViewerAPI, GPUInfo } from './types.js';
 type Handlers = Pick<ViewerAPI, 'initial' | 'open' | 'decode' | 'thumbnail' | 'original' | 'capabilities' | 'gpu' | 'fullscreen' | 'reveal'> & { 'open-paths': (paths: string[]) => ReturnType<ViewerAPI['initial']> };
-import { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, protocol } from 'electron';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { APP_URL, rendererAsset } from './app-protocol.js';
 import { randomUUID } from 'node:crypto';
 import { DecodeService } from './decode-service.js';
 import { EXTENSIONS, isImage } from './formats.js';
 
+protocol.registerSchemesAsPrivileged([{ scheme: 'prism', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+const experimentalWebGPU = process.argv.includes('--experimental-webgpu');
 const allowSoftware = process.argv.includes('--allow-software-rendering');
 const smokeIndex = process.argv.indexOf('--smoke');
 const smokeReport = smokeIndex >= 0 ? process.argv[smokeIndex + 1] : null;
 // Do not silently replace actual GPU rendering with SwiftShader on normal runs.
 if (!allowSoftware) app.commandLine.appendSwitch('disable-software-rasterizer');
+// Keep Chromium's normal adapter policy unless the user explicitly opts in.
+if (experimentalWebGPU) {
+  app.commandLine.appendSwitch('enable-unsafe-webgpu');
+  if (process.platform === 'linux') {
+    const features = new Set(app.commandLine.getSwitchValue('enable-features').split(',').filter(Boolean));
+    features.add('Vulkan'); features.add('VulkanFromANGLE');
+    app.commandLine.appendSwitch('enable-features', [...features].join(','));
+    app.commandLine.appendSwitch('use-angle', 'vulkan');
+  }
+}
 app.setName('Prism');
 let window: BrowserWindow | null = null;
 let decoder: DecodeService;
@@ -21,8 +33,7 @@ let files = new Map<string, string>();
 let selectionVersion = 0;
 let pendingOpen: string[] | null = null;
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-const indexFile = path.join(__dirname, 'renderer', 'index.html');
-const indexURL = pathToFileURL(indexFile).href;
+const indexURL = APP_URL;
 
 function fileArguments(argv: string[]) {
   const args = argv.slice(process.defaultApp ? 2 : 1);
@@ -87,7 +98,7 @@ function handle<K extends keyof Handlers>(name: K, fn: Handlers[K]) { ipcMain.ha
 async function gpuInfo(): Promise<GPUInfo> {
   let info: GPUInfo['info'] = {};
   try { info = await app.getGPUInfo('basic') as GPUInfo['info']; } catch { /* shown as unknown */ }
-  return { features: { ...app.getGPUFeatureStatus() }, info, allowSoftware, electron: process.versions.electron, chromium: process.versions.chrome };
+  return { features: { ...app.getGPUFeatureStatus() }, info, allowSoftware, experimentalWebGPU, smoke: Boolean(smokeReport), electron: process.versions.electron, chromium: process.versions.chrome };
 }
 
 app.on('open-file', (event, file) => {
@@ -105,6 +116,14 @@ else {
     if (paths.length) choosePaths(paths).then(selection => window!.webContents.send('selection', selection)).catch(showError);
   });
   app.whenReady().then(async () => {
+    protocol.handle('prism', async request => {
+      const asset = rendererAsset(request.url, request.method);
+      if (!asset) return new Response('Not found', { status: 404 });
+      try {
+        const bytes = await fs.readFile(path.join(__dirname, 'renderer', asset.name));
+        return new Response(request.method === 'HEAD' ? null : new Uint8Array(bytes), { headers: { 'Content-Type': asset.type, 'X-Content-Type-Options': 'nosniff' } });
+      } catch { return new Response('Not found', { status: 404 }); }
+    });
     decoder = new DecodeService();
     session.defaultSession.setPermissionRequestHandler((_, __, callback) => callback(false));
     session.defaultSession.setPermissionCheckHandler(() => false);
@@ -156,7 +175,7 @@ else {
       { label: 'File', submenu: [{ label: 'Open images…', accelerator: 'CmdOrCtrl+O', click: () => openFromMenu(false) }, { label: 'Open folder…', accelerator: 'CmdOrCtrl+Shift+O', click: () => openFromMenu(true) }, { type: 'separator' }, { role: 'quit' }] },
       { label: 'View', submenu: [{ role: 'togglefullscreen' }, { role: 'toggleDevTools' }, { label: 'Rendering diagnostics', click: () => window!.webContents.send('show-diagnostics') }] }
     ] as Electron.MenuItemConstructorOptions[]));
-    await window!.loadFile(indexFile);
+    await window!.loadURL(indexURL);
     if (smokeReport) {
       const { run } = await import('./smoke.js');
       run({ window, choosePaths, gpuInfo, reportPath: smokeReport, app }).catch(error => { console.error(error); app.exit(1); });

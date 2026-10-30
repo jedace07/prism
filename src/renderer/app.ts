@@ -156,12 +156,13 @@ async function loadImage(index: number, { page = 0, preserve = false, keepSlides
       bitmap = await pngBitmap(result.bytes);
     }
     if (generation !== state.generation) { bitmap.close(); return; }
-    state.result = result; state.pages = result.metadata.pages;
     // Use source dimensions for zoom percentages even when a preview is reduced.
     const displayWidth = result.reduced ? result.metadata.width : result.width;
     const displayHeight = result.reduced ? result.metadata.height : result.height;
-    try { state.gpu.setBitmap(bitmap, displayWidth, displayHeight, !preserve); }
+    try { await state.gpu.setBitmap(bitmap, displayWidth, displayHeight, !preserve); }
     finally { bitmap.close(); }
+    if (generation !== state.generation) return;
+    state.result = result; state.pages = result.metadata.pages;
     // Release the encoded preview after its texture is uploaded.
     result.bytes = null;
     $('image-controls').hidden = false; updatePageLabel(); setMetadata(result);
@@ -289,13 +290,14 @@ function togglePlay() {
 async function showDiagnostics() {
   if (!$('diagnostics').open) $('diagnostics').showModal();
   const section = document.createElement('div'); section.className = `gpu-summary${!state.gpu || state.gpu.software ? ' warning' : ''}`;
-  const title = document.createElement('strong'); title.textContent = state.gpu ? (state.gpu.software ? 'Software WebGL2 — explicit fallback' : 'WebGL2 image rendering') : 'Hardware WebGL2 unavailable'; section.append(title);
+  const title = document.createElement('strong'); title.textContent = state.gpu ? (state.gpu.software ? 'Software WebGPU — explicit fallback' : 'WebGPU image rendering') : 'Hardware WebGPU unavailable'; section.append(title);
   const details = [
     state.gpu?.renderer || errorMessage(gpuFailure || 'No renderer'),
     state.gpu ? `Maximum texture edge: ${number(state.gpu.maxTextureSize)} px · Image textures capped at 32 megapixels` : '',
-    state.gpuInfo ? `Chromium WebGL: ${state.gpuInfo.features.webgl2 || state.gpuInfo.features.webgl || 'unknown'} · GPU compositing: ${state.gpuInfo.features.gpu_compositing || 'unknown'}` : '',
+    state.gpuInfo ? `Chromium WebGPU: ${state.gpuInfo.features.webgpu || 'unknown'} · GPU compositing: ${state.gpuInfo.features.gpu_compositing || 'unknown'}` : '',
     `Electron ${state.gpuInfo?.electron || '?'} · Chromium ${state.gpuInfo?.chromium || '?'}`,
-    'Image decoding runs on the CPU. Image drawing, zoom, pan, rotation, and sampling run in WebGL2 shaders.'
+    `Experimental driver support: ${state.gpuInfo?.experimentalWebGPU ? 'enabled' : 'off'}`,
+    'Image decoding runs on the CPU. Image drawing, zoom, pan, rotation, and sampling run in WebGPU shaders.'
   ].filter(Boolean);
   for (const line of details) { const p = document.createElement('p'); p.textContent = line; section.append(p); }
   $('gpu-details').replaceChildren(section);
@@ -353,13 +355,20 @@ api.onFullscreen(enabled => $('fullscreen').setAttribute('aria-pressed', String(
 async function initialize() {
   try {
     state.gpuInfo = await api.gpu();
-    state.gpu = new GPUCanvas($('image-canvas'), { allowSoftware: state.gpuInfo.allowSoftware, onChange: updateTransform, onError: error => { gpuFailure = error; stopSlideshow(); stopAnimation(); showError(error, 'GPU rendering interrupted'); $('gpu-label').textContent = 'GPU lost'; $('gpu-badge').classList.add('warning'); } });
+    state.gpu = await GPUCanvas.create($('image-canvas'), { allowSoftware: state.gpuInfo.allowSoftware, readback: state.gpuInfo.smoke, onChange: updateTransform, onError: error => { gpuFailure = error; stopSlideshow(); stopAnimation(); showError(error, 'GPU rendering interrupted'); $('gpu-label').textContent = 'GPU lost'; $('gpu-badge').classList.add('warning'); } });
     state.gpu.resize();
-    // The renderer string catches software drivers even when WebGL is enabled.
+    // Adapter/device selection confirms the backend actually used for drawing.
+    if (state.gpuInfo.smoke) {
+      const gpu = state.gpu;
+      window.prismTest = {
+        info: () => ({ api: 'WebGPU', renderer: gpu.renderer, vendor: gpu.vendor, software: gpu.software, maxTextureSize: gpu.maxTextureSize }),
+        pixel: (x, y) => gpu.readPixel(x, y),
+        transform: () => ({ pan: { ...gpu.pan }, scale: gpu.scale, rotation: gpu.rotation, nearest: gpu.nearest }),
+        loseDevice: () => gpu.loseDeviceForTest()
+      };
+    }
     state.gpuInfo = await api.gpu();
-    const feature = state.gpuInfo.features.webgl2 || state.gpuInfo.features.webgl;
-    if (!state.gpuInfo.allowSoftware && (state.gpuInfo.info.auxAttributes?.softwareRendering || !String(feature).startsWith('enabled'))) throw new Error(`Chromium reports WebGL2 as ${feature || 'unavailable'}. Hardware rendering could not be confirmed. Check your GPU driver and restart Prism.`);
-    $('gpu-label').textContent = state.gpu.software ? 'Software WebGL2' : 'GPU · WebGL2';
+    $('gpu-label').textContent = state.gpu.software ? 'Software WebGPU' : 'GPU · WebGPU';
     $('gpu-badge').classList.toggle('warning', state.gpu.software);
   } catch (error) {
     gpuFailure = error; state.gpu = null; $('gpu-label').textContent = 'GPU unavailable'; $('gpu-badge').classList.add('warning'); showError(error, 'GPU rendering unavailable');
@@ -368,3 +377,5 @@ async function initialize() {
   document.body.dataset.ready = 'true';
 }
 initialize();
+
+window.addEventListener('beforeunload', () => { stopSlideshow(); stopAnimation(); state.gpu?.dispose(); });
