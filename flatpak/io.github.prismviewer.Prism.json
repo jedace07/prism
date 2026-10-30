@@ -16,7 +16,7 @@
     "--env=GTK_USE_PORTAL=1",
     "--env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons"
   ],
-  "cleanup": ["/include", "/lib/pkgconfig", "/lib/cmake", "/share/man", "*.a", "*.la"],
+  "cleanup": ["/include", "/lib/pkgconfig", "/lib/cmake", "/share/man", "*.a"],
   "modules": [
     {
       "name": "libraw",
