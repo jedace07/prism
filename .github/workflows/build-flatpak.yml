@@ -51,7 +51,8 @@ jobs:
           branch: master
           build-dir: .flatpak-build
           repo-dir: .flatpak-repo
-          cache-key: prism-26.08-${{ hashFiles('flatpak/**', 'bun.lock') }}
+          # Match the action's restore prefix so manifest changes reuse compiler caches.
+          cache-key: flatpak-builder-x86_64-prism-26.08-${{ hashFiles('flatpak/*.json', 'bun.lock') }}
           upload-artifact: false
 
       - name: Verify decoders in the packaged runtime
