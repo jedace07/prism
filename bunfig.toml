@@ -1,0 +1,7 @@
+[install]
+# Electron Packager traverses a conventional node_modules dependency tree.
+linker = "hoisted"
+
+[run]
+# Also use Bun for dependency tools whose shebang requests node.
+bun = true

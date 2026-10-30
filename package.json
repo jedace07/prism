@@ -1,0 +1,31 @@
+{
+  "name": "prism-image-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local Electron image viewer with WebGL2 rendering and broad native decoding",
+  "main": "src/main.cjs",
+  "desktopName": "io.github.prismviewer.Prism.desktop",
+  "license": "MIT",
+  "packageManager": "bun@1.4.4",
+  "scripts": {
+    "postinstall": "bun node_modules/electron/install.js",
+    "start": "bun scripts/start.cjs",
+    "test": "bun test",
+    "test:smoke": "bun scripts/smoke.cjs",
+    "package": "bun scripts/package.cjs",
+    "flatpak:build": "bun scripts/flatpak.cjs build",
+    "flatpak:bundle": "bun scripts/flatpak.cjs bundle",
+    "flatpak:check": "bun scripts/flatpak.cjs check"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.1.0"
+  },
+  "trustedDependencies": ["electron", "sharp"]
+}

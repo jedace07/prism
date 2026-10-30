@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.prismviewer.Prism</id>
+  <name>Prism</name>
+  <summary>View local images with GPU rendering and broad format support</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.prismviewer"><name>Prism contributors</name></developer>
+  <description>
+    <p>Prism is a local image viewer that renders image textures using WebGL2. Browse folders, pan, zoom, rotate, play animated images, and inspect multipage files.</p>
+    <p>Bundled Sharp and ImageMagick decoders support common photos, camera RAW, JPEG XL, HEIC, Photoshop files, OpenEXR, TIFF, and PDF, subject to codec capabilities. Images stay on your device.</p>
+  </description>
+  <launchable type="desktop-id">io.github.prismviewer.Prism.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <releases><release version="1.0.0" date="2026-10-29"/></releases>
+  <supports><control>pointing</control><control>keyboard</control></supports>
+</component>

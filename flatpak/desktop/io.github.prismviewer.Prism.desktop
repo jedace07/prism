@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Prism
+GenericName=Image Viewer
+Comment=View local images with GPU rendering and broad format support
+Exec=prism %F
+Icon=io.github.prismviewer.Prism
+Terminal=false
+Categories=Graphics;Viewer;Photography;
+MimeType=image/jpeg;image/png;image/gif;image/webp;image/avif;image/heif;image/heic;image/jxl;image/tiff;image/bmp;image/x-icon;image/svg+xml;image/vnd.adobe.photoshop;image/x-exr;image/x-dcraw;image/x-tga;image/jp2;image/x-portable-pixmap;image/x-xpixmap;application/pdf;
+StartupNotify=true
+StartupWMClass=Prism
+DBusActivatable=false

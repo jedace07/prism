@@ -1,0 +1,91 @@
+{
+  "app-id": "io.github.prismviewer.Prism",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "26.08",
+  "sdk": "org.freedesktop.Sdk",
+  "base": "org.electronjs.Electron2.BaseApp",
+  "base-version": "26.08",
+  "command": "prism",
+  "separate-locales": false,
+  "finish-args": [
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--filesystem=xdg-pictures:ro",
+    "--env=GTK_USE_PORTAL=1",
+    "--env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons"
+  ],
+  "cleanup": ["/include", "/lib/pkgconfig", "/lib/cmake", "/share/man", "*.a", "*.la"],
+  "modules": [
+    {
+      "name": "libraw",
+      "config-opts": ["--disable-static", "--disable-examples", "--disable-openmp"],
+      "sources": [{
+        "type": "archive",
+        "url": "https://www.libraw.org/data/LibRaw-0.22.2.tar.gz",
+        "sha256": "de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa"
+      }]
+    },
+    {
+      "name": "imath",
+      "buildsystem": "cmake-ninja",
+      "config-opts": ["-DBUILD_TESTING=OFF", "-DIMATH_BUILD_EXAMPLES=OFF", "-DPYTHON=OFF", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_LIBDIR=lib"],
+      "sources": [{
+        "type": "archive",
+        "url": "https://github.com/AcademySoftwareFoundation/Imath/releases/download/v3.2.3/Imath-3.2.3.tar.gz",
+        "sha256": "72f498e7073890a2a1b870e453908a07c9725f9d1384527043a38578bfb4ef31"
+      }]
+    },
+    {
+      "name": "openexr",
+      "buildsystem": "cmake-ninja",
+      "config-opts": ["-DBUILD_TESTING=OFF", "-DOPENEXR_BUILD_TOOLS=OFF", "-DOPENEXR_BUILD_EXAMPLES=OFF", "-DOPENEXR_INSTALL_EXAMPLES=OFF", "-DOPENEXR_FORCE_INTERNAL_IMATH=OFF", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_LIBDIR=lib"],
+      "sources": [{
+        "type": "archive",
+        "url": "https://github.com/AcademySoftwareFoundation/openexr/releases/download/v3.5.2/openexr-3.5.2.tar.gz",
+        "sha256": "e5750af57bbed556b462cbf0c39550d9063b2028c0184ec65fe42fdae458cdea"
+      }]
+    },
+    {
+      "name": "ghostscript",
+      "config-opts": ["--disable-cups", "--disable-gtk", "--without-x", "--with-drivers=FILES", "--with-fontpath=/usr/share/fonts"],
+      "sources": [{
+        "type": "archive",
+        "url": "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10080/ghostscript-10.08.0.tar.xz",
+        "sha256": "c20492bc8ebb96c87fa2e52a0926e1cda8cde95d66145e018ac713fed5da38cf"
+      }]
+    },
+    {
+      "name": "imagemagick",
+      "config-opts": [
+        "--disable-static", "--disable-docs", "--without-perl", "--without-x",
+        "--with-modules", "--with-quantum-depth=16", "--enable-hdri",
+        "--with-raw=yes", "--with-heic=yes", "--with-jxl=yes", "--with-openexr=yes",
+        "--with-gslib=no", "--with-gs-font-dir=/app/share/ghostscript/fonts"
+      ],
+      "sources": [{
+        "type": "archive",
+        "url": "https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-34/ImageMagick-7.1.2-34.tar.xz",
+        "sha256": "55fe0ec246245b46c429f9e6bc65294ad4a78a66b88abd9817971ca157856323"
+      }]
+    },
+    {
+      "name": "prism",
+      "buildsystem": "simple",
+      "build-commands": [
+        "mkdir -p /app/lib/prism",
+        "cp -a prism/. /app/lib/prism/",
+        "install -Dm755 desktop/prism /app/bin/prism",
+        "install -Dm644 desktop/io.github.prismviewer.Prism.desktop /app/share/applications/io.github.prismviewer.Prism.desktop",
+        "install -Dm644 desktop/io.github.prismviewer.Prism.metainfo.xml /app/share/metainfo/io.github.prismviewer.Prism.metainfo.xml",
+        "install -Dm644 desktop/io.github.prismviewer.Prism.svg /app/share/icons/hicolor/scalable/apps/io.github.prismviewer.Prism.svg",
+        "install -Dm644 /app/lib/prism/resources/app/LICENSE /app/share/licenses/io.github.prismviewer.Prism/LICENSE"
+      ],
+      "sources": [
+        {"type": "dir", "path": "../dist/Prism-linux-x64", "dest": "prism"},
+        {"type": "dir", "path": "desktop", "dest": "desktop"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Prism — Local image viewer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M3 7h6l2-3h9v5M3 7v13h17l2-11H7l-4 11"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 3h9v11H3z"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M7 7h10v10H7z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14m-7-7v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 9a9 9 0 1 1 1 9M3 3v6h6"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24"><path d="M12 3v18M8 6 3 18h5zm8 0 5 12h-5z"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 0h7v7h-7z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 4v16m8-16v16"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 18 6-6 4 4 3-6 5 7"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4M9 9h6v6H9z"/></symbol>
+    <symbol id="i-checker" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18m6-18v18"/></symbol>
+  </defs></svg>
+  <header class="toolbar">
+    <div class="brand"><span class="prism-mark">◈</span><span>Prism<span class="brand-sub">IMAGE VIEWER</span></span></div>
+    <div class="toolbar-group">
+      <button id="open" class="primary" title="Open images (Ctrl+O)"><svg><use href="#i-open"/></svg>Open images</button>
+      <button id="folder" class="icon-button" aria-label="Open folder" title="Open folder (Ctrl+Shift+O)"><svg><use href="#i-folder"/></svg></button>
+    </div>
+    <div class="file-heading"><strong id="file-name">Your images, in their best light.</strong><span id="file-subtitle">Local files. Full focus.</span></div>
+    <div class="toolbar-group right">
+      <button id="gpu-badge" class="gpu-badge" title="Rendering diagnostics"><span class="status-dot"></span><span id="gpu-label">Checking GPU</span></button>
+      <button id="info-toggle" class="icon-button" aria-label="Image information" title="Image information (I)" aria-pressed="false"><svg><use href="#i-info"/></svg></button>
+      <button id="fullscreen" class="icon-button" aria-label="Toggle fullscreen" title="Fullscreen (F)"><svg><use href="#i-full"/></svg></button>
+    </div>
+  </header>
+  <main>
+    <section class="workspace" id="workspace">
+      <div class="stage" id="stage" data-background="dark">
+        <canvas id="image-canvas" aria-label="Image rendered with WebGL2"></canvas>
+        <div class="empty" id="empty">
+          <div class="empty-art"><div class="art-back"></div><div class="art-front"><svg><use href="#i-image"/></svg><span class="art-spark">✦</span></div></div>
+          <span class="eyebrow">A LITTLE SPACE FOR THE BIG PICTURE</span>
+          <h1>Every pixel. Every possibility.</h1>
+          <p>Drop an image or a folder here.<br>From everyday photos to the formats less traveled.</p>
+          <button id="empty-open" class="primary large"><svg><use href="#i-plus"/></svg>Open an image</button>
+          <div class="format-chips"><span>RAW</span><span>HEIC</span><span>JPEG XL</span><span>PSD</span><span>EXR</span><button id="formats-link">Explore formats ↗</button></div>
+        </div>
+        <div id="loading" class="loading" hidden><span class="spinner"></span><span>Decoding image…</span></div>
+        <div id="error" class="error" role="alert" hidden><strong id="error-title">Couldn’t open this image</strong><p id="error-message"></p><button id="error-dismiss">Dismiss</button></div>
+        <button id="previous" class="edge-nav previous" aria-label="Previous image" title="Previous image (←)" hidden><svg><use href="#i-left"/></svg></button>
+        <button id="next" class="edge-nav next" aria-label="Next image" title="Next image (→)" hidden><svg><use href="#i-right"/></svg></button>
+        <div id="drop-overlay" class="drop-overlay" hidden><svg><use href="#i-open"/></svg><strong>Drop to open</strong><span>Images and folders welcome</span></div>
+        <div id="image-controls" class="image-controls" hidden>
+          <button id="zoom-out" class="icon-button" aria-label="Zoom out" title="Zoom out (−)"><svg><use href="#i-minus"/></svg></button>
+          <button id="zoom-value" class="zoom-value" title="Actual size (1)">100%</button>
+          <button id="zoom-in" class="icon-button" aria-label="Zoom in" title="Zoom in (+)"><svg><use href="#i-plus"/></svg></button>
+          <span class="divider"></span>
+          <button id="fit" class="icon-button" aria-label="Fit image" title="Fit image (0)"><svg><use href="#i-fit"/></svg></button>
+          <button id="rotate" class="icon-button" aria-label="Rotate clockwise" title="Rotate clockwise (R)"><svg><use href="#i-rotate"/></svg></button>
+          <button id="flip" class="icon-button" aria-label="Flip horizontally" title="Flip horizontally (H)"><svg><use href="#i-flip"/></svg></button>
+          <span class="divider"></span>
+          <button id="pixel" class="icon-button" aria-label="Nearest neighbor sampling" title="Pixel-perfect sampling (P)" aria-pressed="false"><svg><use href="#i-grid"/></svg></button>
+          <button id="background" class="icon-button" aria-label="Change background" title="Cycle dark, checkerboard, light (B)"><svg><use href="#i-checker"/></svg></button>
+          <button id="play" class="icon-button" aria-label="Play animation or slideshow" title="Play / pause animation or slideshow (Space)"><svg><use href="#i-play"/></svg></button>
+        </div>
+        <div class="page-controls" id="page-controls" hidden><button id="page-prev" class="icon-button" aria-label="Previous page or frame"><svg><use href="#i-left"/></svg></button><span id="page-label"></span><button id="page-next" class="icon-button" aria-label="Next page or frame"><svg><use href="#i-right"/></svg></button></div>
+      </div>
+      <aside id="inspector" class="inspector" hidden>
+        <div class="panel-heading"><h2>Image details</h2><button id="info-close" class="icon-button" aria-label="Close information"><svg><use href="#i-close"/></svg></button></div>
+        <div class="detail-preview"><svg><use href="#i-image"/></svg><strong id="detail-name">No image selected</strong><span id="detail-format">—</span></div>
+        <dl id="metadata"></dl>
+        <button id="reveal" class="secondary" disabled><svg><use href="#i-folder"/></svg>Show in folder</button>
+        <p class="panel-note">Images stay on this device. Edits to the view never change your files.</p>
+      </aside>
+    </section>
+    <section id="filmstrip-section" class="filmstrip-section" hidden aria-label="Images in folder">
+      <div class="filmstrip-heading"><span><svg><use href="#i-folder"/></svg><span id="directory-name">Images</span></span><span id="image-count"></span></div>
+      <div id="filmstrip" class="filmstrip"></div>
+    </section>
+  </main>
+  <footer><div><span class="local-dot"></span><span id="status" role="status" aria-live="polite">Ready when you are</span></div><div id="footer-hint">Scroll to zoom <span>·</span> Drag to pan <span>·</span> <button id="help">Keyboard shortcuts</button></div><button id="formats-footer">Format support</button></footer>
+  <dialog id="diagnostics"><div class="dialog-heading"><div><span class="eyebrow">UNDER THE HOOD</span><h2>Rendering & format support</h2></div><button class="icon-button dialog-close" aria-label="Close diagnostics"><svg><use href="#i-close"/></svg></button></div><div id="gpu-details"></div><div id="format-details"></div></dialog>
+  <dialog id="shortcuts"><div class="dialog-heading"><h2>A few handy shortcuts</h2><button class="icon-button dialog-close" aria-label="Close shortcuts"><svg><use href="#i-close"/></svg></button></div><dl class="shortcuts-list"><dt>Open images / folder</dt><dd>Ctrl O / Ctrl Shift O</dd><dt>Previous / next image</dt><dd>← / →</dd><dt>Fit / actual size</dt><dd>0 / 1</dd><dt>Zoom</dt><dd>+ / − / scroll</dd><dt>Rotate / flip</dt><dd>R / H</dd><dt>Previous / next page</dt><dd>Page Up / Page Down</dd><dt>Play / pause</dt><dd>Space</dd><dt>Pixel sampling / background</dt><dd>P / B</dd><dt>Information / fullscreen</dt><dd>I / F</dd></dl><p class="panel-note">Double-click the image to switch between fit and actual size. On macOS, use ⌘ in place of Ctrl.</p></dialog>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
