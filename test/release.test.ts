@@ -30,10 +30,14 @@ async function fixture(): Promise<string> {
   );
   for (const [platform, extension] of [
     ['linux-x86_64', 'flatpak'],
-    ['windows-x64', 'zip'],
+    ['windows-x64', 'exe'],
   ]) {
     await fs.writeFile(
-      path.join(root, 'release-assets', `Prism-${version}-${platform}.${extension}`),
+      path.join(
+        root,
+        'release-assets',
+        `Prism-${version}-${platform}${extension === 'exe' ? '-setup' : ''}.${extension}`,
+      ),
       `fixture ${platform}`,
     );
     await fs.writeFile(
@@ -96,7 +100,7 @@ test('release validation blocks mismatched tags, commits and incomplete asset se
     );
     assert.notEqual(run(root, 'verify-release.ts').exitCode, 0);
     await assert.rejects(fs.access(path.join(root, 'release-assets/SHA256SUMS')));
-    await fs.unlink(path.join(root, 'release-assets', `Prism-${version}-windows-x64.zip`));
+    await fs.unlink(path.join(root, 'release-assets', `Prism-${version}-windows-x64-setup.exe`));
     assert.notEqual(run(root, 'verify-release.ts').exitCode, 0);
   } finally {
     await fs.rm(root, { recursive: true, force: true });

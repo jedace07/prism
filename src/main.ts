@@ -202,6 +202,9 @@ if (!smokeReport && !app.requestSingleInstanceLock()) {
   app
     .whenReady()
     .then(async () => {
+      if (process.platform === 'win32') {
+        app.setAppUserModelId('io.github.prismviewer.Prism');
+      }
       decoder = new DecodeService();
       session.defaultSession.setPermissionRequestHandler((_, __, callback) => callback(false));
       session.defaultSession.setPermissionCheckHandler(() => false);

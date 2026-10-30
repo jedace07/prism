@@ -1,6 +1,6 @@
 {
   "name": "prism-image-viewer",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "private": true,
   "description": "A local Electron image viewer with WebGL2 rendering and broad native decoding",
   "main": ".build/app/src/main.js",
@@ -22,7 +22,8 @@
     "lint:fix": "bun x --bun --no-install biome lint --write src scripts test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "bun run lint && bun run format:check && bun run typecheck && bun scripts/check-version.ts"
+    "check": "bun run lint && bun run format:check && bun run typecheck && bun scripts/check-version.ts",
+    "package:windows": "bun node_modules/electron-builder/cli.js --config electron-builder.json --win nsis --x64 --prepackaged dist/Prism-win32-x64 --publish never"
   },
   "engines": {
     "bun": ">=1.4.4"
@@ -33,10 +34,12 @@
     "@types/bun": "^1.4.4",
     "@types/dom-webcodecs": "^0.1.19",
     "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2"
   },
   "trustedDependencies": [
     "electron"
-  ]
+  ],
+  "author": "jedace07"
 }

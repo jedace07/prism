@@ -9,7 +9,7 @@ async function main(): Promise<void> {
   const directory = path.join(root, 'release-assets');
   const expected = [
     `Prism-${version}-linux-x86_64.flatpak`,
-    `Prism-${version}-windows-x64.zip`,
+    `Prism-${version}-windows-x64-setup.exe`,
     `Prism-${version}-linux-x86_64-build-info.json`,
     `Prism-${version}-windows-x64-build-info.json`,
   ].sort();

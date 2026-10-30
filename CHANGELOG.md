@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.2 - 2026-10-30
+
+- Replace the Windows portable ZIP with an offline NSIS installation wizard, with installation folder selection, Start menu and desktop shortcuts, and Windows uninstall support.
+- Verify installation, the installed decoder and renderer, and uninstallation on the Windows runner before publication.
+- Keep Linux Flatpak packaging unchanged. Windows installers remain unsigned.
+
 ## 0.1.0-alpha.1 - 2026-10-30
 
 First versioned alpha release of Prism for Windows x64 and Linux x86_64.

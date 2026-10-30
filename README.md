@@ -57,13 +57,13 @@ Use Command in place of Ctrl on macOS.
 
 ## Downloads
 
-Download versioned builds from [GitHub Releases](https://github.com/jedace07/prism/releases). The first release is **0.1.0-alpha.1**, published as a prerelease while Prism is early in development.
+Download versioned builds from [GitHub Releases](https://github.com/jedace07/prism/releases). The current release is **0.1.0-alpha.2**, published as a prerelease while Prism is early in development.
 
-- **Windows x64:** extract `Prism-0.1.0-alpha.1-windows-x64.zip` and open `Prism-win32-x64/prism.exe`. Keep the entire application folder together. Electron and Bun are bundled; no runtime installation is required. This is an unsigned portable build.
-- **Linux x86_64:** download `Prism-0.1.0-alpha.1-linux-x86_64.flatpak` and install it:
+- **Windows x64:** run `Prism-0.1.0-alpha.2-windows-x64-setup.exe`. The wizard lets you choose an installation folder and install for your account or all users (administrator permission required). Launch Prism from the Start menu or desktop shortcut; remove it through Windows Settings → Apps → Installed apps. Electron and Bun are bundled in the offline installer. The installer is unsigned. If you used the earlier portable release, you can delete its extracted folder after installing.
+- **Linux x86_64:** download `Prism-0.1.0-alpha.2-linux-x86_64.flatpak` and install it:
 
 ```sh
-flatpak install --system ./Prism-0.1.0-alpha.1-linux-x86_64.flatpak
+flatpak install --system ./Prism-0.1.0-alpha.2-linux-x86_64.flatpak
 flatpak run --system io.github.prismviewer.Prism
 ```
 
@@ -87,6 +87,8 @@ Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP d
 - `src/renderer/animation.ts`: Chromium frame decoding and timed texture uploads.
 
 The renderer uses context isolation, no Node integration, a restrictive CSP, denied navigation/popups and denied network requests. IPC checks the calling frame and authorizes image access using file tokens. Bun and its upstream license notices are bundled, so installed artifacts need neither host Bun nor Node.js.
+
+Windows installer packaging runs on the GitHub Windows runner: `bun run package` prepares the application and `bun run package:windows` wraps it in an NSIS wizard. The runner installs into a temporary folder, verifies the installed runtime and WebGL renderer, then uninstalls and checks cleanup before uploading the installer for release.
 
 ## License
 

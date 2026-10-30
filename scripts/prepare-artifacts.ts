@@ -13,13 +13,19 @@ async function main(): Promise<void> {
     throw new Error('The packaged app must pass smoke tests with the current version.');
   }
   const platform = process.platform === 'win32' ? 'windows-x64' : 'linux-x86_64';
-  const source = process.platform === 'win32' ? 'Prism-windows-x64.zip' : 'Prism-x86_64.flatpak';
-  const extension = process.platform === 'win32' ? 'zip' : 'flatpak';
+  const source =
+    process.platform === 'win32'
+      ? 'dist/installer/Prism-windows-x64-setup.exe'
+      : 'Prism-x86_64.flatpak';
+  const extension = process.platform === 'win32' ? 'exe' : 'flatpak';
   const output = path.join(root, 'release-assets');
   await fs.mkdir(output, { recursive: true });
   await fs.copyFile(
     path.join(root, source),
-    path.join(output, `Prism-${version}-${platform}.${extension}`),
+    path.join(
+      output,
+      `Prism-${version}-${platform}${process.platform === 'win32' ? '-setup' : ''}.${extension}`,
+    ),
   );
   const info = {
     version,
