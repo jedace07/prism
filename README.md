@@ -84,15 +84,15 @@ The packager targets the current OS and architecture. The output bundles Electro
 
 ## Flatpak
 
+Builds run on GitHub-hosted runners; no local Builder or SDK installation is needed. Open **Actions → Build Linux Flatpak → Run workflow**, then download `Prism-linux-flatpak-x86_64-<run number>` from the completed run. Extract it and install the bundle:
+
 ```bash
-bun run flatpak:check
-bun run flatpak:build
-bun run flatpak:bundle
-flatpak install --user ./dist/Prism-x86_64.flatpak
+sha256sum -c SHA256SUMS
+flatpak install --user ./Prism-x86_64.flatpak
 flatpak run io.github.prismviewer.Prism
 ```
 
-The local manifest is [flatpak/io.github.prismviewer.Prism.json](flatpak/io.github.prismviewer.Prism.json). The build script prepares the portable app with Bun, then builds codec modules inside the Flatpak SDK. Full Flatpak compilation and sandbox testing are pending Builder availability. See [flatpak/README.md](flatpak/README.md) for isolated builder setup, permissions, limitations and release preparation.
+The [workflow](.github/workflows/build-flatpak.yml) installs locked dependencies with Bun, runs decoder tests, prepares Electron, builds the [Flatpak manifest](flatpak/io.github.prismviewer.Prism.json), and checks the packaged runtime before uploading a bundle, checksum, build information, and decoder report. Artifacts expire after 14 days. The workflow is manual for initial testing and reusable by a later Windows/macOS/Linux release pipeline. See [flatpak/README.md](flatpak/README.md) for details and the current validation status.
 
 ## Verification
 

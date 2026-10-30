@@ -8,7 +8,7 @@ async function main() {
     download: { checksums: require('electron/checksums.json') },
     // Keep Sharp's platform-native bindings and worker files directly accessible.
     asar: false, prune: true,
-    ignore: /^\/(?:\.tools|\.git|\.agents|\.codex|\.aws|\.flatpak-builder|\.flatpak-build|\.flatpak-repo|flatpak|test|scripts|artifacts|dist|AGENTS\.md)(?:\/|$)/
+    ignore: /^\/(?:\.tools|\.git|\.github|\.agents|\.codex|\.aws|\.flatpak-builder|\.flatpak-build|\.flatpak-repo|flatpak|test|scripts|artifacts|dist|AGENTS\.md)(?:\/|$)/
   });
   console.log(`Portable application: ${directories.join(', ')}`);
 }

@@ -1,12 +1,45 @@
-# Local Flatpak build
+# Flatpak test artifacts
 
-Status: the manifest and desktop metadata are prepared. Full SDK compilation and sandbox runtime checks are pending Flatpak Builder availability; they have not passed yet.
+The supported testing workflow builds on GitHub-hosted runners, with no local Builder or SDK installation. A green workflow run is the evidence that compilation and packaged decoder checks passed. Hardware GPU rendering still needs testing on a desktop.
 
 This manifest packages the app produced by `bun run package`. It targets **Linux x86_64**, Freedesktop **26.08**, and the matching Electron BaseApp. The app, Electron and Sharp are copied from `dist/Prism-linux-x64`; LibRaw, Imath, OpenEXR, Ghostscript and ImageMagick are built from checksum-pinned sources inside the SDK. JPEG XL, HEIF, JPEG, PNG, WebP, TIFF and other libraries come from the SDK/runtime.
 
-## Tools without host package layering
+## Build on GitHub
 
-JavaScript dependencies use Bun:
+After the workflow has been pushed to the repository's default branch:
+
+1. Open [Actions → Build Linux Flatpak](https://github.com/jedace07/prism/actions/workflows/build-flatpak.yml).
+2. Select **Run workflow** and the branch to test.
+3. Wait for the run to complete, then download its `Prism-linux-flatpak-x86_64-<run number>` artifact.
+4. Extract the ZIP before running the installation commands below.
+
+The artifact contains `Prism-x86_64.flatpak`, `SHA256SUMS`, `build-info.json` and `flatpak-capabilities.json`. It is retained for 14 days. The build information records the source commit, runner URL, Bun/Electron/Sharp versions, runtime branch and architecture. No custom secrets are needed to build or upload the artifact.
+
+The workflow is deliberately manual during initial testing: it does not run on every push, publish a GitHub release, or deploy to Flathub. It uses read-only repository permissions, pinned action revisions and the Freedesktop 26.08 container on a disposable privileged Linux runner. The SDK and native build tools are confined to that runner.
+
+The runner installs dependencies from `bun.lock`, runs the existing decoder tests, then executes `bun run package` before building the manifest. A separate check starts Electron's embedded Node.js inside the **Platform runtime**, loads bundled Sharp, checks required ImageMagick readers, and exercises JPEG XL, EXR, PSD, JPEG 2000, QOI and PDF decoding. A missing required reader or broken codec fails the run. HEIC and RAW reader availability is checked, but actual HEVC and camera-file variants still need sample-file testing. GUI and hardware GPU tests do not run on this headless job.
+
+## Install and test the artifact
+
+From the extracted artifact directory:
+
+```sh
+sha256sum -c SHA256SUMS
+flatpak install --user ./Prism-x86_64.flatpak
+flatpak run io.github.prismviewer.Prism
+```
+
+Use the in-app GPU badge to verify that your graphics device is active. Open representative images, camera RAW files, animations and multipage files from your own collection. Building an artifact and installing it are separate operations.
+
+## Later Windows/macOS/Linux automation
+
+`build-flatpak.yml` also accepts `workflow_call`, so a future release workflow can call it as a Linux job alongside native Windows and macOS jobs. Keep each native build on its corresponding GitHub runner: install the same pinned Bun version, run `bun install --frozen-lockfile`, test, and run the existing platform-aware `bun run package`. Upload each platform's directory as an archive to preserve its executable permissions and layout. Native codec bundling, Windows signing, macOS signing/notarization, release triggers and release publication need separate configuration before public distribution.
+
+The initial workflow only produces the Linux x86_64 Flatpak. Windows/macOS jobs and automated release publication are not enabled yet.
+
+## Optional local reproduction
+
+Local builds are available only when explicitly wanted; they are not required for downloading and testing GitHub artifacts. Use Bun for JavaScript dependencies:
 
 ```sh
 bun install --frozen-lockfile

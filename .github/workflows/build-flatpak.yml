@@ -1,0 +1,97 @@
+name: Build Linux Flatpak
+
+on:
+  workflow_dispatch:
+  # A future release workflow can call this job alongside Windows/macOS jobs.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flatpak-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flatpak:
+    name: Linux Flatpak (x86_64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08
+      # Flatpak's nested build sandboxes need this on the disposable runner.
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun from package.json
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run decoder tests
+        run: bun run test
+
+      - name: Prepare Electron application
+        run: bun run package
+
+      - name: Build Flatpak and codec dependencies
+        uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6
+        with:
+          manifest-path: flatpak/io.github.prismviewer.Prism.json
+          bundle: Prism-x86_64.flatpak
+          arch: x86_64
+          branch: master
+          build-dir: .flatpak-build
+          repo-dir: .flatpak-repo
+          cache-key: prism-26.08-${{ hashFiles('flatpak/**', 'bun.lock') }}
+          upload-artifact: false
+
+      - name: Verify decoders in the packaged runtime
+        run: |
+          mkdir -p artifacts
+          flatpak build --runtime --readonly --unshare=network .flatpak-build \
+            env ELECTRON_RUN_AS_NODE=1 PRISM_MAGICK=/app/bin/magick \
+            /app/lib/prism/prism /app/lib/prism/resources/app/src/verify-package.cjs \
+            > artifacts/flatpak-capabilities.json
+
+      - name: Record checksum and build information
+        run: |
+          cp Prism-x86_64.flatpak artifacts/Prism-x86_64.flatpak
+          sha256sum Prism-x86_64.flatpak > artifacts/SHA256SUMS
+          bun -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,repository:process.env.GITHUB_REPOSITORY,run:`${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,bun:process.versions.bun,electron:require("electron/package.json").version,sharp:require("sharp/package.json").version,runtime:"26.08",architecture:"x86_64"},null,2))' > artifacts/build-info.json
+
+      - name: Upload test artifact
+        id: artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Prism-linux-flatpak-x86_64-${{ github.run_number }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Write download instructions
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          {
+            echo '### Flatpak ready for testing'
+            echo
+            echo "[Download the artifact]($ARTIFACT_URL), extract it, then run:"
+            echo
+            echo '```sh'
+            echo 'sha256sum -c SHA256SUMS'
+            echo 'flatpak install --user ./Prism-x86_64.flatpak'
+            echo 'flatpak run io.github.prismviewer.Prism'
+            echo '```'
+            echo
+            echo 'Decoder checks passed in the packaged runtime. Test hardware GPU rendering on your own desktop using the in-app GPU diagnostics.'
+          } >> "$GITHUB_STEP_SUMMARY"
