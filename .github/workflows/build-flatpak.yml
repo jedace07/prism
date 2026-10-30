@@ -16,7 +16,7 @@ jobs:
   flatpak:
     name: Linux Flatpak (x86_64)
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 45
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08
       # Flatpak's nested build sandboxes need this on the disposable runner.
@@ -42,17 +42,13 @@ jobs:
       - name: Prepare Electron application
         run: bun run package
 
-      - name: Restore native build cache
-        id: native-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: .flatpak-builder
-          key: flatpak-builder-x86_64-prism-26.08-${{ hashFiles('flatpak/*.json', 'bun.lock') }}-x86_64
-          restore-keys: |
-            flatpak-builder-x86_64-prism-26.08-
-            prism-26.08-
+      - name: Verify WebGL previews and browser fallbacks
+        timeout-minutes: 5
+        env:
+          PRISM_SMOKE_EXECUTABLE: ${{ github.workspace }}/dist/Prism-linux-x64/prism
+        run: xvfb-run --auto-servernum bun run test:smoke
 
-      - name: Build Flatpak and codec dependencies
+      - name: Package Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6
         with:
           manifest-path: flatpak/io.github.prismviewer.Prism.json
@@ -61,17 +57,14 @@ jobs:
           branch: master
           build-dir: .flatpak-build
           repo-dir: .flatpak-repo
-          # Match the action's restore prefix so manifest changes reuse compiler caches.
-          cache-key: flatpak-builder-x86_64-prism-26.08-${{ hashFiles('flatpak/*.json', 'bun.lock') }}
-          restore-cache: false
-          save-cache: ${{ steps.native-cache.outputs.cache-hit != 'true' }}
+          cache: false
           upload-artifact: false
 
       - name: Verify decoders in the packaged runtime
         run: |
           mkdir -p artifacts
           flatpak build --runtime --readonly --unshare=network .flatpak-build \
-            env ELECTRON_RUN_AS_NODE=1 PRISM_MAGICK=/app/bin/magick \
+            env ELECTRON_RUN_AS_NODE=1 \
             /app/lib/prism/prism /app/lib/prism/resources/app/src/verify-package.cjs \
             > artifacts/flatpak-capabilities.json
 
@@ -79,7 +72,7 @@ jobs:
         run: |
           cp Prism-x86_64.flatpak artifacts/Prism-x86_64.flatpak
           sha256sum Prism-x86_64.flatpak > artifacts/SHA256SUMS
-          bun -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,repository:process.env.GITHUB_REPOSITORY,run:`${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,bun:process.versions.bun,electron:require("electron/package.json").version,sharp:require("sharp/package.json").version,runtime:"26.08",architecture:"x86_64"},null,2))' > artifacts/build-info.json
+          bun -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,repository:process.env.GITHUB_REPOSITORY,run:`${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,bun:process.versions.bun,electron:require("electron/package.json").version,runtime:"26.08",architecture:"x86_64"},null,2))' > artifacts/build-info.json
 
       - name: Upload test artifact
         id: artifact

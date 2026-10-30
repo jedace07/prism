@@ -8,7 +8,7 @@ async function main() {
     out: 'dist', platform: process.platform, arch: process.arch, overwrite: true,
     electronVersion: require('electron/package.json').version,
     download: { checksums: require('electron/checksums.json') },
-    // Keep Sharp's platform-native bindings and worker files directly accessible.
+    // Keep the Bun decoder runtime and worker scripts directly accessible.
     asar: false, prune: true,
     afterCopy: [async ({ buildPath }) => {
       const runtimeDir = path.join(buildPath, 'runtime');

@@ -49,9 +49,9 @@
           <div class="empty-art"><div class="art-back"></div><div class="art-front"><svg><use href="#i-image"/></svg><span class="art-spark">✦</span></div></div>
           <span class="eyebrow">A LITTLE SPACE FOR THE BIG PICTURE</span>
           <h1>Every pixel. Every possibility.</h1>
-          <p>Drop an image or a folder here.<br>From everyday photos to the formats less traveled.</p>
+          <p>Drop an image or a folder here.<br>Photos, artwork, and animations. All on your device.</p>
           <button id="empty-open" class="primary large"><svg><use href="#i-plus"/></svg>Open an image</button>
-          <div class="format-chips"><span>RAW</span><span>HEIC</span><span>JPEG XL</span><span>PSD</span><span>EXR</span><button id="formats-link">Explore formats ↗</button></div>
+          <div class="format-chips"><span>JPEG</span><span>PNG</span><span>WEBP</span><span>GIF</span><span>SVG</span><button id="formats-link">Explore formats ↗</button></div>
         </div>
         <div id="loading" class="loading" hidden><span class="spinner"></span><span>Decoding image…</span></div>
         <div id="error" class="error" role="alert" hidden><strong id="error-title">Couldn’t open this image</strong><p id="error-message"></p><button id="error-dismiss">Dismiss</button></div>
@@ -71,7 +71,7 @@
           <button id="background" class="icon-button" aria-label="Change background" title="Cycle dark, checkerboard, light (B)"><svg><use href="#i-checker"/></svg></button>
           <button id="play" class="icon-button" aria-label="Play animation or slideshow" title="Play / pause animation or slideshow (Space)"><svg><use href="#i-play"/></svg></button>
         </div>
-        <div class="page-controls" id="page-controls" hidden><button id="page-prev" class="icon-button" aria-label="Previous page or frame"><svg><use href="#i-left"/></svg></button><span id="page-label"></span><button id="page-next" class="icon-button" aria-label="Next page or frame"><svg><use href="#i-right"/></svg></button></div>
+        <div class="page-controls" id="page-controls" hidden><button id="page-prev" class="icon-button" aria-label="Previous animation frame"><svg><use href="#i-left"/></svg></button><span id="page-label"></span><button id="page-next" class="icon-button" aria-label="Next animation frame"><svg><use href="#i-right"/></svg></button></div>
       </div>
       <aside id="inspector" class="inspector" hidden>
         <div class="panel-heading"><h2>Image details</h2><button id="info-close" class="icon-button" aria-label="Close information"><svg><use href="#i-close"/></svg></button></div>
@@ -88,7 +88,7 @@
   </main>
   <footer><div><span class="local-dot"></span><span id="status" role="status" aria-live="polite">Ready when you are</span></div><div id="footer-hint">Scroll to zoom <span>·</span> Drag to pan <span>·</span> <button id="help">Keyboard shortcuts</button></div><button id="formats-footer">Format support</button></footer>
   <dialog id="diagnostics"><div class="dialog-heading"><div><span class="eyebrow">UNDER THE HOOD</span><h2>Rendering & format support</h2></div><button class="icon-button dialog-close" aria-label="Close diagnostics"><svg><use href="#i-close"/></svg></button></div><div id="gpu-details"></div><div id="format-details"></div></dialog>
-  <dialog id="shortcuts"><div class="dialog-heading"><h2>A few handy shortcuts</h2><button class="icon-button dialog-close" aria-label="Close shortcuts"><svg><use href="#i-close"/></svg></button></div><dl class="shortcuts-list"><dt>Open images / folder</dt><dd>Ctrl O / Ctrl Shift O</dd><dt>Previous / next image</dt><dd>← / →</dd><dt>Fit / actual size</dt><dd>0 / 1</dd><dt>Zoom</dt><dd>+ / − / scroll</dd><dt>Rotate / flip</dt><dd>R / H</dd><dt>Previous / next page</dt><dd>Page Up / Page Down</dd><dt>Play / pause</dt><dd>Space</dd><dt>Pixel sampling / background</dt><dd>P / B</dd><dt>Information / fullscreen</dt><dd>I / F</dd></dl><p class="panel-note">Double-click the image to switch between fit and actual size. On macOS, use ⌘ in place of Ctrl.</p></dialog>
+  <dialog id="shortcuts"><div class="dialog-heading"><h2>A few handy shortcuts</h2><button class="icon-button dialog-close" aria-label="Close shortcuts"><svg><use href="#i-close"/></svg></button></div><dl class="shortcuts-list"><dt>Open images / folder</dt><dd>Ctrl O / Ctrl Shift O</dd><dt>Previous / next image</dt><dd>← / →</dd><dt>Fit / actual size</dt><dd>0 / 1</dd><dt>Zoom</dt><dd>+ / − / scroll</dd><dt>Rotate / flip</dt><dd>R / H</dd><dt>Previous / next frame</dt><dd>Page Up / Page Down</dd><dt>Play / pause</dt><dd>Space</dd><dt>Pixel sampling / background</dt><dd>P / B</dd><dt>Information / fullscreen</dt><dd>I / F</dd></dl><p class="panel-note">Double-click the image to switch between fit and actual size. On macOS, use ⌘ in place of Ctrl.</p></dialog>
   <script type="module" src="app.js"></script>
 </body>
 </html>

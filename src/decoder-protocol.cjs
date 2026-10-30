@@ -1,7 +1,7 @@
 const MAX_JSON = 2 * 1024 * 1024;
 const MAX_BYTES = 140_000_000;
 
-// Length-prefixed metadata and raw pixels avoid base64 and per-pixel JSON.
+// Length-prefixed metadata and encoded image bytes avoid base64 and per-byte JSON.
 class FrameReader {
   constructor(onMessage) { this.onMessage = onMessage; this.reset(); }
   reset() { this.header = Buffer.alloc(8); this.headerOffset = 0; this.json = null; this.jsonOffset = 0; this.bytes = null; this.bytesOffset = 0; }

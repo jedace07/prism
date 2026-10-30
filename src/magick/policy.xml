@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE policymap>
-<policymap>
-  <policy domain="resource" name="width" value="100KP"/>
-  <policy domain="resource" name="height" value="100KP"/>
-  <policy domain="resource" name="list-length" value="4096"/>
-  <policy domain="path" rights="none" pattern="@*"/>
-  <policy domain="coder" rights="none" pattern="{HTTP,HTTPS,FTP,URL,FILE,INLINE,DATA,MSL,MVG,TEXT,LABEL,CAPTION,PANGO}"/>
-</policymap>

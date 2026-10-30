@@ -6,7 +6,6 @@ const assert = require('node:assert/strict');
 const { promisify } = require('node:util');
 const execFile = promisify(require('node:child_process').execFile);
 const { DecodeService, getRuntimePath } = require('./decode-service.cjs');
-const command = (bin, args) => execFile(bin, args, { windowsHide: true });
 async function capabilities() {
   const decoder = new DecodeService();
   try { return await decoder.request('capabilities'); } finally { await decoder.close(); }
@@ -72,29 +71,15 @@ async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
     const svg = path.join(temp, 'vector.svg');
     await fs.writeFile(svg, '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32"><rect width="64" height="32" fill="#f00080"/></svg>');
     await select(svg); assert.deepEqual(await pixel(0, 0), [240, 0, 128, 255]);
-    checks.push('SVG rasterization works in Electron with the installed native libraries');
-    const c = await capabilities();
-    if (c.magick) {
-      for (const [ext, coder] of [['jxl', 'JXL'], ['exr', 'EXR'], ['psd', 'PSD']]) {
-        if (!c.formats.some(f => f.name === coder)) continue;
-        const special = path.join(temp, `special.${ext}`);
-        await command('magick', ['-size', '64x32', 'xc:red', special]);
-        await select(special); const color = await pixel(0, 0);
-        assert.ok(color[0] > 245 && color[1] < 10 && color[2] < 10, `${ext}: ${color}`);
-      }
-      checks.push('JPEG XL, EXR and PSD pass through ImageMagick and render on the GPU');
-      const tiff = path.join(temp, '03-pages.tiff'); await command('magick', ['-size', '64x32', 'xc:red', 'xc:lime', tiff]);
-      await select(tiff); await click('page-next');
-      await until('document.getElementById("page-label").textContent === "Page 2 / 2" && document.getElementById("loading").hidden', 'TIFF page two');
-      assert.deepEqual(await pixel(0, 0), [0, 255, 0, 255]); checks.push('Multipage TIFF navigation renders the selected page');
-      const gif = path.join(temp, '04-animation.gif'); await command('magick', ['-delay', '10', '-size', '64x32', 'xc:red', 'xc:lime', '-loop', '0', gif]);
-      await select(gif); await until('document.getElementById("play").getAttribute("aria-pressed") === "true"', 'animated GIF playback');
-      const colors = new Set();
-      for (let i = 0; i < 12; i++) { colors.add((await pixel(0, 0)).join(',')); await new Promise(resolve => setTimeout(resolve, 45)); }
-      assert.ok(colors.has('255,0,0,255') && colors.has('0,255,0,255'), `Animation colors: ${[...colors]}`);
-      await click('play'); assert.equal(await js('document.getElementById("play").getAttribute("aria-pressed")'), 'false');
-      checks.push('Animated GIF frames are decoded, uploaded to WebGL, displayed and paused');
-    }
+    checks.push('SVG browser fallback renders through WebGL');
+    const c = await capabilities(); assert.equal(c.engine, 'Bun.Image');
+    const gif = path.join(temp, '04-animation.gif');
+    await select(gif); await until('document.getElementById("play").getAttribute("aria-pressed") === "true"', 'animated GIF playback');
+    const colors = new Set();
+    for (let i = 0; i < 12; i++) { colors.add((await pixel(0, 0)).join(',')); await new Promise(resolve => setTimeout(resolve, 45)); }
+    assert.ok(colors.has('255,0,0,255') && colors.has('0,255,0,255'), `Animation colors: ${[...colors]}`);
+    await click('play'); assert.equal(await js('document.getElementById("play").getAttribute("aria-pressed")'), 'false');
+    checks.push('Bun first-frame preview and Chromium animated GIF playback');
     await click('gpu-badge'); await until('document.querySelector(".supported-grid span") !== null', 'format diagnostics');
     assert.equal(await js('document.getElementById("diagnostics").open'), true);
     await fs.writeFile(path.join(path.dirname(reportPath), 'diagnostics.png'), (await window.webContents.capturePage()).toPNG());

@@ -1,4 +1,3 @@
 #!/bin/sh
 unset ELECTRON_RUN_AS_NODE
-export PRISM_MAGICK=/app/bin/magick
 exec zypak-wrapper /app/lib/prism/prism "$@"

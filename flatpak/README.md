@@ -1,25 +1,28 @@
 # Flatpak test artifacts
 
-The supported testing workflow builds on GitHub-hosted runners, with no local Builder or SDK installation. A green workflow run is the evidence that compilation and packaged decoder checks passed. Hardware GPU rendering still needs testing on a desktop.
+Builds run on GitHub-hosted runners. You do not need a local Builder, SDK, compiler or image-tool installation to test an artifact.
 
-This manifest packages the app produced by `bun run package`. It targets **Linux x86_64**, Freedesktop **26.08**, and the matching Electron BaseApp. The app, Electron, bundled Bun decoder runtime and Sharp are copied from `dist/Prism-linux-x64`; LibRaw, Imath, OpenEXR, Ghostscript and ImageMagick are built from checksum-pinned sources inside the SDK. JPEG XL, HEIF, JPEG, PNG, WebP, TIFF and other libraries come from the SDK/runtime.
-
-## Build on GitHub
-
-After the workflow has been pushed to the repository's default branch:
+## Build and download
 
 1. Open [Actions → Build Linux Flatpak](https://github.com/jedace07/prism/actions/workflows/build-flatpak.yml).
-2. Select **Run workflow** and the branch to test.
-3. Wait for the run to complete, then download its `Prism-linux-flatpak-x86_64-<run number>` artifact.
-4. Extract the ZIP before running the installation commands below.
+2. Select **Run workflow** and a branch.
+3. Download `Prism-linux-flatpak-x86_64-<run number>` from the successful run and extract it.
 
-The artifact contains `Prism-x86_64.flatpak`, `SHA256SUMS`, `build-info.json` and `flatpak-capabilities.json`. It is retained for 14 days. The build information records the source commit, runner URL, Bun/Electron/Sharp versions, runtime branch and architecture. No custom secrets are needed to build or upload the artifact.
+The ZIP contains `Prism-x86_64.flatpak`, `SHA256SUMS`, `build-info.json` and `flatpak-capabilities.json`, plus test evidence where generated. Artifacts remain available for 14 days. Build information records the source commit, workflow URL, Bun/Electron versions, runtime and architecture. No custom secrets are required.
 
-The workflow is deliberately manual during initial testing: it does not run on every push, publish a GitHub release, or deploy to Flathub. It uses read-only repository permissions, pinned action revisions and the Freedesktop 26.08 container on a disposable privileged Linux runner. The SDK and native build tools are confined to that runner.
+The workflow is manual and reusable through `workflow_call`. It uses pinned action revisions, read-only repository permissions and the Freedesktop 26.08 container on a disposable privileged runner. It does not publish releases or deploy to Flathub.
 
-The runner installs dependencies from `bun.lock`, runs the existing decoder tests, then executes `bun run package` before building the manifest. A separate check starts Electron's embedded Node.js inside the **Platform runtime**, communicates with the bundled Bun decoder process over binary pipes, checks required ImageMagick readers, and exercises JPEG XL, EXR, PSD, JPEG 2000, QOI and PDF decoding. A missing required reader or broken codec fails the run. HEIC and RAW reader availability is checked, but actual HEVC and camera-file variants still need sample-file testing. Sharp stays outside the Electron process to avoid GLib symbol conflicts. GUI and hardware GPU tests do not run on this headless job.
+## Dependencies and verification
 
-## Install and test the artifact
+All application and development dependencies are managed by **Bun**. Image decoding uses the built-in **Bun.Image** API, with no Sharp or other image package. The manifest has a single application module: it copies the Bun-prepared Electron app, bundled Bun runtime, licenses and desktop files. It does not download or compile ImageMagick, LibRaw, Imath, OpenEXR, Ghostscript, or codec libraries.
+
+Freedesktop Platform/SDK and Electron BaseApp provide Flatpak infrastructure, including Zypak; those prebuilt refs are not Bun packages. Keep their branches aligned at 26.08. The build only targets Linux x86_64 at present.
+
+The runner performs unit tests, then a software-WebGL desktop smoke test under Xvfb. It checks PNG texture colors, transformations, SVG fallback, thumbnails and GIF playback. SwiftShader is explicitly enabled for this test. Because the disposable CI container runs as root, the smoke runner passes `--no-sandbox` only in that environment; the shipped launcher does not pass it.
+
+After Flatpak packaging, a separate check starts Electron's embedded Node inside the **Platform runtime**, communicates with the bundled Bun decoder, and checks JPEG/PNG/WebP/GIF/BMP pixels, alpha, orientation and PNG transport. Failed checks block artifact upload. The in-app GPU badge must still be checked on a real desktop to validate hardware rendering.
+
+## Install and test
 
 From the extracted artifact directory:
 
@@ -29,65 +32,18 @@ flatpak install --user ./Prism-x86_64.flatpak
 flatpak run io.github.prismviewer.Prism
 ```
 
-Use the in-app GPU badge to verify that your graphics device is active. Open representative images, camera RAW files, animations and multipage files from your own collection. Building an artifact and installing it are separate operations.
+Linux Bun.Image supports JPEG, PNG, WebP, GIF and BMP. Chromium adds SVG/icons and formats such as AVIF when supported by its build. HEIC/TIFF support in Bun.Image is OS-dependent on macOS/Windows, not available in Linux Flatpak through host codec installs. RAW, PSD, EXR, JPEG 2000, PDF and multipage document support were removed with the previous decoder stack. The UI reports actual backend/platform capabilities rather than advertising those formats.
 
-## Later Windows/macOS/Linux automation
+## Sandbox
 
-`build-flatpak.yml` also accepts `workflow_call`, so a future release workflow can call it as a Linux job alongside native Windows and macOS jobs. Keep each native build on its corresponding GitHub runner: install the same pinned Bun version, run `bun install --frozen-lockfile`, test, and run the existing platform-aware `bun run package`. Upload each platform's directory as an archive to preserve its executable permissions and layout. Native codec bundling, Windows signing, macOS signing/notarization, release triggers and release publication need separate configuration before public distribution.
+The launcher uses Zypak and keeps Electron process isolation. Permissions include GPU devices, Wayland/fallback X11, shared IPC, and read-only Pictures access. Other files/folders use the desktop chooser portal; selecting a folder grants sibling browsing access. Drag and drop requires paths accessible to the sandbox. There is no network, blanket home, host spawn, audio or filesystem-write permission.
 
-The initial workflow only produces the Linux x86_64 Flatpak. Windows/macOS jobs and automated release publication are not enabled yet.
+The Bun worker runs within the same Flatpak sandbox and only receives paths authorized by Electron's file-token registry. Constructor pixel limits, preview budgets and bounded IPC messages remain enforced. No native image-tool executables are invoked.
 
-## Optional local reproduction
+## Later targets and optional reproduction
 
-Local builds are available only when explicitly wanted; they are not required for downloading and testing GitHub artifacts. Use Bun for JavaScript dependencies:
+A future release workflow can call `build-flatpak.yml` alongside Windows and macOS jobs. Build each native target on its corresponding runner using `bun install --frozen-lockfile`, tests and `bun run package`; the packager bundles the current platform's Bun runtime. Native codec availability, signing/notarization and release triggers need separate target-specific work.
 
-```sh
-bun install --frozen-lockfile
-```
+Local builds are optional and must be explicitly requested on the image-based development machine. Existing `bun run flatpak:build` and `bun run flatpak:bundle` scripts remain available for reproduction with a preinstalled user-scoped Flatpak Builder. No local build is required for the GitHub workflow.
 
-Install the builder as a **user Flatpak**, rather than installing native packages into the OS image:
-
-```sh
-flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --user --no-related flathub org.flatpak.Builder org.electronjs.Electron2.BaseApp//26.08
-```
-
-The builder brings its Freedesktop SDK dependency. `--no-related` avoids downloading optional graphics extensions just for the build tools; installing Prism later resolves its runtime extensions normally. `flatpak:build` also resolves manifest dependencies from the user Flathub remote. SDKs and build tools remain in user Flatpak storage; project build output stays in `.flatpak-builder`, `.flatpak-build`, `.flatpak-repo` and `dist`. The SDK can be a substantial download. No `sudo`, RPM layering, host compiler installation or global JavaScript packages are needed.
-
-## Build and install
-
-```sh
-# Parse and resolve the manifest without compiling it.
-bun run flatpak:check
-# Prepare the Electron app using Bun, build codecs, and export a local repository.
-bun run flatpak:build
-# Produce a single installable bundle from that repository.
-bun run flatpak:bundle
-flatpak install --user ./dist/Prism-x86_64.flatpak
-flatpak run io.github.prismviewer.Prism
-```
-
-The commands prefer an existing `flatpak-builder`, otherwise invoke the `org.flatpak.Builder` Flatpak with explicit access to this project. Source downloads occur before offline compilation; the manifest does not enable network access during build commands. Installing Prism is a separate explicit command; building does not install or run the application.
-
-To invoke the manifest directly after `bun run package`:
-
-```sh
-flatpak run --filesystem="$PWD" --command=flatpak-builder org.flatpak.Builder \
-  --user --install-deps-from=flathub --force-clean --repo=.flatpak-repo \
-  .flatpak-build flatpak/io.github.prismviewer.Prism.json
-```
-
-## Sandbox and rendering
-
-- Zypak launches Electron, retaining its process isolation inside Flatpak. The wrapper does not use `--no-sandbox`.
-- `--device=dri` exposes GPU rendering. Wayland and fallback X11 display sockets are enabled, with shared IPC for X11.
-- Pictures access is read-only. Other files and folders use the desktop file chooser portal; choose a folder to grant access to its contents for sibling browsing. Drag and drop only works for paths available to the sandbox.
-- There is no network permission, host spawn permission, blanket home access, filesystem write access, audio permission or broad D-Bus access.
-- ImageMagick is explicitly selected from `/app/bin/magick`. The app's decoder policy and resource limits still apply.
-- GPU drivers must be available through Flatpak's GL extensions. The app continues to require hardware WebGL2 by default; `flatpak run io.github.prismviewer.Prism --allow-software-rendering` explicitly permits software rendering.
-
-Open the in-app rendering and format diagnostics to inspect the actual sandbox renderer and codec capabilities. HEIF container support does not guarantee that the runtime provides every HEVC codec variant. Host codec packages cannot add support inside Flatpak.
-
-## Scope of this manifest
-
-This is a **local packaging manifest**, not a Flathub submission. `bun.lock` pins JavaScript dependencies during the preparation step, while Flatpak pins codec source archives. The app source enters the manifest as an already prepared local directory, so the manifest alone does not rebuild JavaScript dependencies from a pristine checkout. Before public distribution, choose an app ID under an owned namespace, add project URLs and screenshots to AppStream metadata, replace the local app directory source with a versioned release artifact or a fully offline source build, and test all target architectures. Keep the runtime and BaseApp branches aligned when updating them.
+This remains a local-artifact packaging manifest rather than a Flathub submission: application code enters as `dist/Prism-linux-x64`, prepared from `bun.lock` on the runner. Before public distribution, use an owned app ID, add project URLs/screenshots, and use a versioned release artifact or an offline source build.

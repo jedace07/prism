@@ -1,55 +1,37 @@
 # Prism
 
-A local Electron image viewer. The image itself is drawn by WebGL2: decoded pixels are uploaded as GPU textures, and shaders perform drawing, zoom, pan, rotation and flipping. Image decoding uses CPU codecs in an isolated Bun subprocess bundled with the application.
+A local Electron image viewer. Bun.Image decodes and resizes previews in the bundled Bun subprocess; Chromium turns the encoded PNG into a bitmap and uploads it to WebGL2. Drawing, zoom, pan, rotation, flipping and sampling use GPU shaders. There are no external image packages or image-tool executables.
 
-## Run
+## Development
 
-Bun 1.4.4 or newer is the development runtime and package manager. No separate host Node.js or npm installation is required; Electron retains its own embedded Node.js runtime for the desktop app, and packages include Bun for native decoding. On an image-based OS, keep JavaScript tools in Bun and native build dependencies inside Flatpak or a development container.
+Use **Bun 1.4.4+** for dependencies and scripts. No separate host Node.js, compiler, Sharp or ImageMagick installation is required.
 
-```bash
+```sh
 bun install --frozen-lockfile
 bun run start
+bun run start /path/to/photo.png
 ```
 
-Or use `./start.sh`. Open a file or folder directly:
+`./start.sh` also starts the app through Bun. Opening a single image discovers its siblings; opening several files keeps the selected set. Folders are scanned without recursion, with natural sorting and a 10,000-entry limit. Drag images or folders into the window, or choose **All files** to try an unrecognized extension.
 
-```bash
-./start.sh /path/to/photo.jxl
-./start.sh /path/to/pictures
-bun run start /path/to/photo.tiff
-```
+Build/package the application on GitHub runners, as described below. Local development and unit tests do not require installing anything into an image-based OS. `AGENTS.md` records this workflow.
 
-Opening one image also discovers its siblings. Opening several files keeps the selected set. Folders are scanned without recursion, with natural filename sorting and a limit of 10,000 entries. Drag files or folders into the window to open them. Choose **All files** in the file dialog to try an unrecognized extension.
+## Rendering and formats
 
-## Rendering
+Hardware WebGL2 is required by default. The app disables Chromium's software rasterizer, checks its active renderer, and reports context loss. Click the GPU badge for device and format diagnostics. To explicitly permit software rendering for a remote desktop or test, pass `--allow-software-rendering`.
 
-Prism requests a high-performance WebGL2 context and checks its actual renderer and Chromium's GPU feature status. Normal startup disables Chromium's software rasterizer and rejects known software drivers. A missing or lost hardware context produces an error rather than silently claiming GPU acceleration.
-
-Click the **GPU · WebGL2** badge to see the renderer, texture limit, Chromium feature status and installed decoder formats. No Canvas 2D rendering fallback is used.
-
-For remote desktops or testing, explicitly allow software rendering:
-
-```bash
-./start.sh --allow-software-rendering
-```
-
-Software renderers are labeled as software. This option does not guarantee software rendering; it permits it when hardware is unavailable. Add `--use-angle=swiftshader` to explicitly select SwiftShader for a test.
-
-## Format support
-
-| Decoder | Formats |
+| Decoder | Supported inputs |
 | --- | --- |
-| Bundled Sharp / libvips | JPEG, PNG, WebP, GIF, AVIF, TIFF, SVG, Ultra HDR where supported by the bundled codec |
-| Optional ImageMagick 7 | BMP, ICO, JPEG XL, JPEG 2000, HEIC/HEIF, PSD/PSB, EXR, Radiance HDR, camera RAW, QOI, TGA, DDS, PNM, FITS, DICOM, PDF/EPS and many more, depending on installed modules and delegates |
-| Chromium ImageDecoder | GIF, animated WebP, APNG and AVIF animation where supported |
+| Bun.Image on Linux | JPEG, PNG, WebP, GIF, BMP |
+| Bun.Image on macOS/Windows | The common formats above, plus TIFF/HEIC/AVIF when the OS backend and codecs provide them |
+| Chromium fallback | SVG, icons, AVIF and other formats supported by that Chromium build |
+| Chromium animation | GIF, animated WebP, APNG and AVIF where supported |
 
-**Format support** in the app queries the decoders installed on the current machine. The list contains format identifiers and aliases, not a promise that every codec variant or external delegate is available. ImageMagick 7 must be on `PATH` as `magick`; alternatively set `PRISM_MAGICK` to its executable path.
+See [Bun.Image's platform matrix](https://bun.com/docs/runtime/image#platform-backends). The in-app diagnostics distinguish Bun's portable formats, optional system formats, and queried browser formats. Unsupported files show an error; there is no suggestion to install host codecs.
 
-The Flatpak builds and bundles ImageMagick, LibRaw, OpenEXR and Ghostscript against its runtime codecs, including JPEG XL and HEIF. It does not use host ImageMagick packages. HEVC-encoded HEIC requires a compatible codec in the Flatpak runtime. For development outside Flatpak, use the already available ImageMagick or a container; avoid layering codec packages onto an image-based host. Restart Prism after changing decoder availability.
+**ImageMagick and Sharp have been removed.** Specialist formats such as camera RAW, PSD, EXR, JPEG 2000 and PDF are no longer provided. Bun.Image decodes the first image only; multipage TIFF/PDF navigation is not supported. Animation frame controls use Chromium.
 
-PDF/EPS rasterization needs Ghostscript. RAW support follows the installed LibRaw version. Layered files display the decoder's composite or available layers/pages, not an editable document. Animation originals are capped at 64 MiB; larger or unsupported animations expose available frames through page controls. APNG frame controls require Chromium's decoder.
-
-Display output is 8-bit sRGB, including high bit-depth and HDR inputs; this is not an HDR mastering or scientific intensity viewer. Sharp honors supported embedded ICC profiles and EXIF orientation. ImageMagick handles fallback color conversion. Large images are reduced to a preview fitting both the GPU texture edge and a 32-megapixel output budget. Reduced previews are clearly labeled. Inputs over one gigapixel are rejected. Viewing transforms never write to the source file.
+Bun applies JPEG EXIF orientation before sizing. Input images are limited to 268,435,456 pixels. Previews fit both the GPU texture limit and a 32-megapixel budget; reduced previews are labeled. Bun emits an encoded PNG, and Chromium manages color when creating the GPU bitmap. The inspector reports output depth rather than implying that Bun exposes source color-profile metadata. This is an 8-bit viewer, not an HDR mastering tool. Browser-only inputs and animation originals are limited to 64 MiB. Viewing never writes to source files.
 
 ## Controls
 
@@ -57,67 +39,51 @@ Display output is 8-bit sRGB, including high bit-depth and HDR inputs; this is n
 | --- | --- |
 | Open images / folder | Ctrl+O / Ctrl+Shift+O |
 | Previous / next image | Left / Right |
-| Zoom at cursor | Mouse wheel |
-| Pan | Drag |
+| Zoom at cursor / pan | Wheel / drag |
 | Fit / actual size | 0 / 1 |
 | Toggle fit and actual size | Double-click |
 | Zoom in / out | + / − |
 | Rotate clockwise / counterclockwise | R / Shift+R |
 | Flip horizontally | H |
-| Pixel sampling | P |
-| Cycle dark / checkerboard / light | B |
-| Previous / next page or frame | Page Up / Page Down |
-| Play / pause animation; otherwise 4-second slideshow | Space |
+| Pixel sampling / background | P / B |
+| Previous / next animation frame | Page Up / Page Down |
+| Play/pause animation or 4-second slideshow | Space |
 | Information / fullscreen | I / F |
 | Stop playback / dismiss error | Escape |
 
-Use Command instead of Ctrl on macOS. Dimensions and zoom use image pixels relative to CSS pixels. Rotation, flipping and panning affect only the view.
+Use Command in place of Ctrl on macOS.
 
-## Portable build
+## GitHub test artifacts
 
-```bash
-bun run package
-./dist/Prism-linux-x64/prism
-```
+Open **Actions → Build Linux Flatpak → Run workflow**. The workflow installs locked dependencies with Bun, runs unit and WebGL smoke tests, prepares Electron and the bundled Bun runtime, packages the Flatpak, and verifies its decoder subprocess in the Platform runtime. The manifest only copies the prepared application and desktop files; it compiles no image dependencies.
 
-The packager targets the current OS and architecture. The output bundles Electron, Bun and Sharp, so it does not require system Bun or Node.js. Keep the entire output directory together. ImageMagick and its delegates remain optional system dependencies. Native bindings are left unpacked. Cross-platform source is included; Linux x64 is the platform validated here.
+Download and extract `Prism-linux-flatpak-x86_64-<run number>` from a successful run:
 
-## Flatpak
-
-Builds run on GitHub-hosted runners; no local Builder or SDK installation is needed. Open **Actions → Build Linux Flatpak → Run workflow**, then download `Prism-linux-flatpak-x86_64-<run number>` from the completed run. Extract it and install the bundle:
-
-```bash
+```sh
 sha256sum -c SHA256SUMS
 flatpak install --user ./Prism-x86_64.flatpak
 flatpak run io.github.prismviewer.Prism
 ```
 
-The [workflow](.github/workflows/build-flatpak.yml) installs locked dependencies with Bun, runs decoder tests, prepares Electron, builds the [Flatpak manifest](flatpak/io.github.prismviewer.Prism.json), and checks the packaged runtime before uploading a bundle, checksum, build information, and decoder report. Artifacts expire after 14 days. The workflow is manual for initial testing and reusable by a later Windows/macOS/Linux release pipeline. See [flatpak/README.md](flatpak/README.md) for details and the current validation status.
+The artifact includes the bundle, checksum, source/build information and decoder report, and expires after 14 days. Test hardware GPU rendering on your own desktop using the GPU diagnostics. Runner WebGL tests explicitly use software rendering; they verify pixels and interactions, not physical GPU acceleration.
 
-## Verification
+The [workflow](.github/workflows/build-flatpak.yml) is manually triggered and reusable by a future Windows/macOS/Linux release pipeline. Native Windows/macOS builds and automatic releases are not enabled yet. See [Flatpak details](flatpak/README.md).
 
-```bash
+## Verification and source
+
+```sh
 bun run test
-# Runs the desktop integration suite with explicit software WebGL:
+# Optional desktop tests; they open a window rather than building the app:
 bun run test:smoke
-# Requires a working hardware GPU and desktop display:
 PRISM_SMOKE_HARDWARE=1 bun run test:smoke
-# Exercise the packaged executable:
-PRISM_SMOKE_HARDWARE=1 PRISM_SMOKE_EXECUTABLE="$PWD/dist/Prism-linux-x64/prism" bun run test:smoke
 ```
 
-Bun runs the existing Node-compatible test suite, including its per-format subtests. Decoder tests cover raster data, alpha, EXIF orientation, representative bundled and system formats, unusual filenames, multipage and mixed-dimension TIFFs, size limits and worker error recovery. Formats unavailable in the local ImageMagick installation are omitted or skipped.
+Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP decoding, literal filenames, size limits, unsupported formats, and the subprocess protocol. Desktop tests exercise WebGL pixels and transforms, thumbnails, SVG fallback, GIF playback, file navigation and renderer isolation. CI uses Xvfb and explicit SwiftShader; only its disposable root smoke test disables Chromium's root-user sandbox check. Normal launches retain sandboxing and use Zypak inside Flatpak.
 
-The integration suite opens a real Electron window. It checks WebGL framebuffer pixel colors, shader transforms, pointer panning, thumbnails, navigation, metadata, SVG and specialist rasterization, animation playback, TIFF pages, context isolation and file-token authorization. It records GPU diagnostics and screenshots in `artifacts/`. The hardware suite passed on **NVIDIA GeForce RTX 3080**, using ANGLE / OpenGL ES 3.2, with software fallback disabled.
+- `src/decoder.cjs`: Bun.Image previews and capabilities.
+- `src/decode-service.cjs`, `src/decode-worker.cjs`, `src/decoder-protocol.cjs`: bounded subprocess work and binary PNG transport.
+- `src/renderer/gpu.js`: WebGL2 texture uploads and shaders.
+- `src/renderer/browser-images.js`: bitmap creation and browser-only formats.
+- `src/renderer/animation.js`: Chromium frame decoding and timed texture uploads.
 
-Native decoding runs in a separate Bun process to avoid the upstream [Electron/Sharp GLib conflict on Linux](https://sharp.pixelplumbing.com/install/#electron-and-linux). Raw pixels cross bounded binary pipes and are uploaded to Electron's WebGL2 canvas. The package includes Bun's upstream license notices in its runtime directory.
-
-## Source
-
-- `src/main.cjs`: native window, file dialogs, file authorization and IPC.
-- `src/decoder.cjs`, `src/decode-worker.cjs`, `src/decode-service.cjs`: decoding and bounded work in a separate Bun process.
-- `src/renderer/gpu.js`: WebGL2 texture uploads and image shaders.
-- `src/renderer/animation.js`: frame decoding and timed GPU uploads.
-- `src/renderer/app.js`: browsing and viewer controls.
-
-The renderer is sandboxed with context isolation, no Node integration, a restrictive CSP, denied navigation/popups and denied network requests. IPC checks the calling frame. ImageMagick receives generated filenames, resource/time limits and a policy blocking URL and instruction coders. System decoder availability and policy still apply.
+The renderer uses context isolation, no Node integration, a restrictive CSP, denied navigation/popups and denied network requests. IPC checks the calling frame and authorizes image access using file tokens. Bun and its upstream license notices are bundled, so installed artifacts need neither host Bun nor Node.js.

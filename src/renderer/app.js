@@ -1,5 +1,6 @@
 import { GPUCanvas } from './gpu.js';
 import { GPUAnimation } from './animation.js';
+import { pngBitmap, browserBitmap, browserThumbnail, browserFormats } from './browser-images.js';
 
 const $ = id => document.getElementById(id);
 const api = window.viewer;
@@ -39,7 +40,7 @@ function setMetadata(result) {
     ['Display texture', `${number(result.width)} × ${number(result.height)}${result.reduced ? ' (reduced preview)' : ''}`],
     ['Color', `${m.depth}-bit · ${m.space || 'unknown'}`],
     ['Profile', m.profile],
-    ['Pages / frames', number(state.pages)],
+    ['Frames', number(state.pages)],
     ['Decoder', m.decoder],
     ['Modified', new Date(file.modified).toLocaleString()],
     ['Location', file.path]
@@ -73,14 +74,22 @@ async function loadImage(index, { page = 0, preserve = false, keepSlideshow = fa
   $('status').textContent = `Opening ${item.name}…`; updateNavigation();
   try {
     if (!state.gpu) throw gpuFailure || new Error('GPU rendering is unavailable.');
-    const result = await api.decode(item.id, { page, maxEdge: state.gpu.maxTextureSize });
+    let result = await api.decode(item.id, { page, maxEdge: state.gpu.maxTextureSize });
     if (generation !== state.generation) return;
+    let bitmap;
+    if (result.browser) {
+      const decoded = await browserBitmap(await api.original(item.id), item.extension, state.gpu.maxTextureSize);
+      bitmap = decoded.bitmap;
+      result = { ...result, ...decoded }; delete result.bitmap;
+    } else bitmap = await pngBitmap(result.bytes);
+    if (generation !== state.generation) { bitmap.close(); return; }
     state.result = result; state.pages = result.metadata.pages;
     // Use source dimensions for zoom percentages even when a preview is reduced.
     const displayWidth = result.reduced ? result.metadata.width : result.width;
     const displayHeight = result.reduced ? result.metadata.height : result.height;
-    state.gpu.setImage(result.bytes, result.width, result.height, displayWidth, displayHeight, !preserve);
-    // Do not retain a second full-sized copy of the raster after GPU upload.
+    try { state.gpu.setBitmap(bitmap, displayWidth, displayHeight, !preserve); }
+    finally { bitmap.close(); }
+    // Release the encoded preview after its texture is uploaded.
     result.bytes = null;
     $('image-controls').hidden = false; updatePageLabel(); setMetadata(result);
     $('status').textContent = `${result.metadata.format} · ${number(result.metadata.width)} × ${number(result.metadata.height)} · ${niceBytes(result.file.size)}${result.reduced ? ' · Reduced preview (GPU / memory limit)' : ''}`;
@@ -143,9 +152,12 @@ function buildFilmstrip() {
   const pump = () => {
     if (generation !== state.thumbnailGeneration || active >= 1 || !queue.length) return;
     const button = queue.shift(); const item = state.files[Number(button.dataset.index)]; active++;
-    api.thumbnail(item.id).then(bytes => {
+    api.thumbnail(item.id).then(async bytes => {
       if (generation !== state.thumbnailGeneration) return;
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' })); state.thumbnailURLs.push(url);
+      return bytes?.browser ? browserThumbnail(await api.original(item.id), item.extension) : new Blob([bytes], { type: 'image/png' });
+    }).then(blob => {
+      if (generation !== state.thumbnailGeneration) return;
+      const url = URL.createObjectURL(blob); state.thumbnailURLs.push(url);
       const img = document.createElement('img'); img.src = url; img.alt = ''; img.draggable = false;
       button.firstChild.replaceWith(img);
     }).catch(() => { if (generation === state.thumbnailGeneration) button.title = `${item.name} — preview unavailable`; })
@@ -214,17 +226,18 @@ async function showDiagnostics() {
   ].filter(Boolean);
   for (const line of details) { const p = document.createElement('p'); p.textContent = line; section.append(p); }
   $('gpu-details').replaceChildren(section);
-  $('format-details').textContent = 'Checking installed decoders…';
+  $('format-details').textContent = 'Checking image support…';
   try {
     state.capabilities ||= await api.capabilities();
     const c = state.capabilities;
-    const heading = document.createElement('h2'); heading.textContent = 'Installed decoders';
+    const heading = document.createElement('h2'); heading.textContent = 'Image support';
     const description = document.createElement('p'); description.className = 'format-description';
-    description.textContent = `Sharp ${c.sharp.sharp} / libvips ${c.sharp.vips}: ${c.native.join(', ')}. ${c.magick || 'ImageMagick 7 is not installed. Install it to add JPEG XL, HEIC, RAW, PSD, EXR, JPEG 2000 and more.'} Formats below are advertised by the installed decoders; actual support depends on codec delegates and system policy. PDF and EPS require Ghostscript. Specialist formats may show a flattened image or preview.`;
+    const browser = await browserFormats();
+    description.textContent = `Bun.Image ${c.version} (${c.backend}) decodes ${c.native.join(', ')}. Chromium adds ${browser.join(', ')} where supported.${c.system.length ? ` System-dependent formats: ${c.system.join(', ')}.` : ''} No external image tools are required.`;
     const grid = document.createElement('div'); grid.className = 'supported-grid';
-    const names = [...new Set([...c.native, ...c.formats.map(f => f.name)])].sort();
-    for (const name of names) { const span = document.createElement('span'); span.textContent = name; span.title = c.formats.find(f => f.name === name)?.description || name; grid.append(span); }
-    const note = document.createElement('p'); note.className = 'format-description'; note.textContent = `${names.length} decoder format identifiers (including aliases). GIF, WebP, APNG and AVIF animation use Chromium where supported. Large animations use page controls. HDR and high bit-depth inputs are converted to 8-bit sRGB for display.`;
+    const names = [...new Set([...c.native, ...browser, ...c.system])].sort();
+    for (const name of names) { const span = document.createElement('span'); span.textContent = name; grid.append(span); }
+    const note = document.createElement('p'); note.className = 'format-description'; note.textContent = 'Format availability varies by platform. Bun.Image decodes the first image; Chromium provides GIF, WebP, APNG and AVIF animation where available. Display output is 8-bit. Browser-only files are limited to 64 MiB.';
     $('format-details').replaceChildren(heading, description, grid, note);
   } catch (error) { $('format-details').textContent = errorMessage(error); }
 }

@@ -133,11 +133,10 @@ else {
     });
     handle('thumbnail', async id => {
       const result = await decoder.request('decode', authorized(id), { thumbnail: true });
-      return result.bytes;
+      return result.browser ? { browser: true } : result.bytes;
     });
     handle('original', async id => {
       const file = authorized(id);
-      if (!['.gif', '.webp', '.png', '.apng', '.avif'].includes(path.extname(file).toLowerCase())) return null;
       const stat = await fs.stat(file);
       if (stat.size > 64 * 1024 * 1024) return null;
       return new Uint8Array(await fs.readFile(file));

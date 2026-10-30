@@ -83,12 +83,13 @@ export class GPUCanvas {
     this.canvas.width = Math.max(1, Math.round(rect.width * dpr)); this.canvas.height = Math.max(1, Math.round(rect.height * dpr));
     if (this.fitMode) this.fit(); else this.requestDraw();
   }
-  setImage(bytes, width, height, displayWidth = width, displayHeight = height, reset = true) {
+  setBitmap(bitmap, displayWidth = bitmap.width, displayHeight = bitmap.height, reset = true) {
+    const { width, height } = bitmap;
     if (this.lost) throw new Error('GPU context lost. Restart Prism.');
     if (width > this.maxTextureSize || height > this.maxTextureSize) throw new Error('Image is larger than the GPU texture limit.');
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.texture); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
     if (gl.getError() !== gl.NO_ERROR) throw new Error('The GPU could not allocate this image texture.');
     this.width = displayWidth; this.height = displayHeight;
     if (reset) { this.rotation = 0; this.flip = [1, 1]; this.fit(); } else this.requestDraw();
