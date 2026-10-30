@@ -12,7 +12,12 @@ import * as os from 'node:os';
   const binary = process.env.PRISM_SMOKE_EXECUTABLE;
   const report = path.join(root, 'artifacts', binary ? 'smoke-packaged.json' : hardware ? 'smoke-hardware.json' : 'smoke.json');
   const args = [...(binary ? [] : [await build()]), '--smoke', report, `--user-data-dir=${profile}`];
-  if (!hardware) args.push('--allow-software-rendering', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--enable-unsafe-webgpu', '--use-webgpu-adapter=swiftshader');
+  if (!hardware) {
+    args.push('--allow-software-rendering', '--enable-unsafe-swiftshader', '--enable-unsafe-webgpu', '--use-webgpu-adapter=swiftshader');
+    // Linux must share one Vulkan backend between the canvas compositor and Dawn.
+    if (process.platform === 'linux') args.push('--enable-features=Vulkan', '--use-angle=vulkan', '--use-vulkan=swiftshader', '--disable-vulkan-surface');
+    else args.push('--use-angle=swiftshader');
+  }
   // Only the disposable root CI test bypasses Chromium's root-user check.
   if (process.env.CI === 'true' && process.getuid?.() === 0) args.push('--no-sandbox');
   const env: NodeJS.ProcessEnv = { ...process.env, ELECTRON_ENABLE_LOGGING: '1' };
