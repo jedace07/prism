@@ -72,14 +72,6 @@ The artifact includes the bundle, checksum, source/build information and decoder
 
 The [workflow](.github/workflows/build-flatpak.yml) is manually triggered and reusable by a future Windows/macOS/Linux release pipeline. Windows portable builds are available separately below. macOS builds and automatic releases are not enabled yet. See [Flatpak details](flatpak/README.md).
 
-## Windows test artifacts
-
-Open **Actions → Build Windows test app → Run workflow**. The workflow runs on `windows-2025`, installs dependencies with Bun, checks TypeScript, runs decoder tests, packages the app, verifies Electron-to-bundled-Bun decoding, and runs the WebGL desktop smoke tests.
-
-Download `Prism-windows-x64-<run number>`, extract the entire ZIP, and launch `Prism-win32-x64/prism.exe`. Keep its DLLs, resources and runtime folder together. No separate Bun or Node.js installation is needed. The artifact also includes build information, `portable-capabilities.json`, smoke reports and screenshots; retention is 14 days. This is an unsigned portable test build, not an installer.
-
-Both build workflows are manual and reusable through `workflow_call`. Artifact upload uses the official action's Node 24 LTS runtime; application dependencies, scripts, compilation and tests use Bun. Installing a separate Node version would not change a JavaScript action's bundled runtime. Windows runner tests explicitly allow SwiftShader; verify hardware rendering on your own desktop.
-
 ## Verification and source
 
 ```sh
