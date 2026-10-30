@@ -44,7 +44,7 @@ The Bun worker runs within the same Flatpak sandbox and only receives paths auth
 
 ## Later targets and optional reproduction
 
-A future release workflow can call `build-flatpak.yml` alongside Windows and macOS jobs. Build each native target on its corresponding runner using `bun install --frozen-lockfile`, tests and `bun run package`; the packager bundles the current platform's Bun runtime. Native codec availability, signing/notarization and release triggers need separate target-specific work.
+A future release workflow can call `build-flatpak.yml` alongside the existing `build-windows.yml` and a future macOS job. Build each native target on its corresponding runner using `bun install --frozen-lockfile`, tests and `bun run package`; the packager bundles the current platform's Bun runtime. Native codec availability, signing/notarization and release triggers need separate target-specific work.
 
 Local builds are optional and must be explicitly requested on the image-based development machine. Existing `bun run flatpak:build` and `bun run flatpak:bundle` scripts remain available for reproduction with a preinstalled Flatpak Builder. No local build is required for the GitHub workflow. The reproduction script defaults to system build dependencies; set `PRISM_FLATPAK_SCOPE=user` only when deliberately using a user remote.
 

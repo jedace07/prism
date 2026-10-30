@@ -65,8 +65,10 @@ test('pixel limit rejects a decompression-bomb header before decoding',async()=>
   const file=path.join(temp,'huge.png');await fs.writeFile(file,bytes);
   await assert.rejects(probe(file));
 });
-test('file paths containing brackets and colons are treated as literal filenames',async()=>{
-  const file=path.join(temp,'test [0]: literal.png');await fs.copyFile(source,file);const result = await decode(file); assert.ok(!result.browser); assert.equal(result.width,64);
+test('file paths containing brackets and permitted punctuation are treated literally',async()=>{
+  // A colon is forbidden in a Windows filename, but remains covered on Unix.
+  const name = process.platform === 'win32' ? 'test [0] literal.png' : 'test [0]: literal.png';
+  const file=path.join(temp,name);await fs.copyFile(source,file);const result = await decode(file); assert.ok(!result.browser); assert.equal(result.width,64);
 });
 test('Bun subprocess recovers from an error and preserves concurrent PNG payloads',async()=>{
   const service=new DecodeService();
