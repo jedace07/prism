@@ -4,7 +4,7 @@ A local Electron image viewer. Bun.Image decodes and resizes previews in the bun
 
 ## Development
 
-The source, preload, renderer, decoder, scripts and tests are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts. 
+The source, preload, renderer, decoder, scripts and tests are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts.
 
 ```sh
 bun install --frozen-lockfile
