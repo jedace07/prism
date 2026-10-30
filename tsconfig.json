@@ -10,8 +10,7 @@
     ],
     "types": [
       "bun",
-      "dom-webcodecs",
-      "@webgpu/types"
+      "dom-webcodecs"
     ],
     "strict": true,
     "esModuleInterop": true,

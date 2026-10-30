@@ -21,7 +21,7 @@ export interface Capabilities { engine: string; version: string; platform: strin
 export interface GPUInfo {
   features: Record<string, string>;
   info: { auxAttributes?: { softwareRendering?: boolean }; [key: string]: unknown };
-  allowSoftware: boolean; experimentalWebGPU: boolean; smoke: boolean; electron?: string; chromium?: string;
+  allowSoftware: boolean; electron?: string; chromium?: string;
 }
 export interface VerifyReport extends Capabilities { passed: boolean; checks: string[]; runtime?: string; bytes?: Uint8Array<ArrayBuffer> }
 export interface DecoderMethods {
@@ -47,12 +47,3 @@ export interface ViewerAPI {
   onDiagnostics(callback: () => void): () => void;
 }
 declare global { interface Window { viewer: ViewerAPI } }
-
-export interface RendererInfo { api: 'WebGPU'; renderer: string; vendor: string; software: boolean; maxTextureSize: number }
-export interface RendererProbe {
-  info(): RendererInfo;
-  pixel(x: number, y: number): Promise<number[]>;
-  transform(): { pan: { x: number; y: number }; scale: number; rotation: number; nearest: boolean };
-  loseDevice(): void;
-}
-declare global { interface Window { prismTest?: RendererProbe } }

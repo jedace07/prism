@@ -2,7 +2,7 @@
   "name": "prism-image-viewer",
   "version": "1.0.0",
   "private": true,
-  "description": "A local Electron image viewer with WebGPU rendering and broad native decoding",
+  "description": "A local Electron image viewer with WebGL2 rendering and broad native decoding",
   "main": ".build/app/src/main.js",
   "desktopName": "io.github.prismviewer.Prism.desktop",
   "license": "Apache-2.0",
@@ -26,7 +26,6 @@
     "@electron/packager": "^20.3.0",
     "@types/bun": "^1.4.4",
     "@types/dom-webcodecs": "^0.1.19",
-    "@webgpu/types": "^0.1.74",
     "electron": "^45.1.0",
     "typescript": "^7.0.2"
   },

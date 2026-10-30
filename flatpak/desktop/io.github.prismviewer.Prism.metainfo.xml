@@ -7,7 +7,7 @@
   <project_license>Apache-2.0</project_license>
   <developer id="io.github.prismviewer"><name>Prism contributors</name></developer>
   <description>
-    <p>Prism is a local image viewer that renders image textures using WebGPU. Browse folders, pan, zoom, rotate, and play animated images.</p>
+    <p>Prism is a local image viewer that renders image textures using WebGL2. Browse folders, pan, zoom, rotate, and play animated images.</p>
     <p>View JPEG, PNG, WebP, GIF, and BMP images, with browser support for SVG, AVIF, and icons where available. Images stay on your device.</p>
   </description>
   <launchable type="desktop-id">io.github.prismviewer.Prism.desktop</launchable>
