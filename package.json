@@ -20,7 +20,7 @@
     "build": "bun scripts/build.ts",
     "lint": "bun x --bun --no-install biome lint --error-on-warnings src scripts test",
     "lint:fix": "bun x --bun --no-install biome lint --write src scripts test",
-    "format": "bun x --bun --no-install prettier --write .",
+    "format": "prettier --write .",
     "format:check": "bun x --bun --no-install prettier --check .",
     "check": "bun run lint && bun run format:check && bun run typecheck && bun scripts/check-version.ts"
   },
