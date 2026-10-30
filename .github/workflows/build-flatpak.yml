@@ -36,6 +36,9 @@ jobs:
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check TypeScript
+        run: bun run typecheck
+
       - name: Run decoder tests
         run: bun run test
 
@@ -65,7 +68,7 @@ jobs:
           mkdir -p artifacts
           flatpak build --runtime --readonly --unshare=network .flatpak-build \
             env ELECTRON_RUN_AS_NODE=1 \
-            /app/lib/prism/prism /app/lib/prism/resources/app/src/verify-package.cjs \
+            /app/lib/prism/prism /app/lib/prism/resources/app/src/verify-package.js \
             > artifacts/flatpak-capabilities.json
 
       - name: Record checksum and build information
@@ -95,7 +98,7 @@ jobs:
             echo
             echo '```sh'
             echo 'sha256sum -c SHA256SUMS'
-            echo 'flatpak install --user ./Prism-x86_64.flatpak'
+            echo 'flatpak install --system ./Prism-x86_64.flatpak'
             echo 'flatpak run io.github.prismviewer.Prism'
             echo '```'
             echo

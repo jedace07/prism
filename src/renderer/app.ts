@@ -1,37 +1,104 @@
+// SPDX-License-Identifier: Apache-2.0
+import type { Capabilities, DisplayResult, GPUInfo, ImageFile, Selection } from '../types.js';
 import { GPUCanvas } from './gpu.js';
 import { GPUAnimation } from './animation.js';
 import { pngBitmap, browserBitmap, browserThumbnail, browserFormats } from './browser-images.js';
 
-const $ = id => document.getElementById(id);
+type Elements = {
+  'background': HTMLElementTagNameMap['button'];
+  'detail-format': HTMLElementTagNameMap['span'];
+  'detail-name': HTMLElementTagNameMap['strong'];
+  'diagnostics': HTMLElementTagNameMap['dialog'];
+  'directory-name': HTMLElementTagNameMap['span'];
+  'drop-overlay': HTMLElementTagNameMap['div'];
+  'empty': HTMLElementTagNameMap['div'];
+  'empty-open': HTMLElementTagNameMap['button'];
+  'error': HTMLElementTagNameMap['div'];
+  'error-dismiss': HTMLElementTagNameMap['button'];
+  'error-message': HTMLElementTagNameMap['p'];
+  'error-title': HTMLElementTagNameMap['strong'];
+  'file-name': HTMLElementTagNameMap['strong'];
+  'file-subtitle': HTMLElementTagNameMap['span'];
+  'filmstrip': HTMLElementTagNameMap['div'];
+  'filmstrip-section': HTMLElementTagNameMap['section'];
+  'fit': HTMLElementTagNameMap['button'];
+  'flip': HTMLElementTagNameMap['button'];
+  'folder': HTMLElementTagNameMap['button'];
+  'format-details': HTMLElementTagNameMap['div'];
+  'fullscreen': HTMLElementTagNameMap['button'];
+  'gpu-badge': HTMLElementTagNameMap['button'];
+  'gpu-details': HTMLElementTagNameMap['div'];
+  'gpu-label': HTMLElementTagNameMap['span'];
+  'help': HTMLElementTagNameMap['button'];
+  'image-canvas': HTMLElementTagNameMap['canvas'];
+  'image-controls': HTMLElementTagNameMap['div'];
+  'image-count': HTMLElementTagNameMap['span'];
+  'info-close': HTMLElementTagNameMap['button'];
+  'info-toggle': HTMLElementTagNameMap['button'];
+  'inspector': HTMLElementTagNameMap['aside'];
+  'loading': HTMLElementTagNameMap['div'];
+  'metadata': HTMLElementTagNameMap['dl'];
+  'next': HTMLElementTagNameMap['button'];
+  'open': HTMLElementTagNameMap['button'];
+  'page-controls': HTMLElementTagNameMap['div'];
+  'page-label': HTMLElementTagNameMap['span'];
+  'page-next': HTMLElementTagNameMap['button'];
+  'page-prev': HTMLElementTagNameMap['button'];
+  'pixel': HTMLElementTagNameMap['button'];
+  'play': HTMLElementTagNameMap['button'];
+  'previous': HTMLElementTagNameMap['button'];
+  'reveal': HTMLElementTagNameMap['button'];
+  'rotate': HTMLElementTagNameMap['button'];
+  'shortcuts': HTMLElementTagNameMap['dialog'];
+  'stage': HTMLElementTagNameMap['div'];
+  'status': HTMLElementTagNameMap['span'];
+  'zoom-in': HTMLElementTagNameMap['button'];
+  'zoom-out': HTMLElementTagNameMap['button'];
+  'zoom-value': HTMLElementTagNameMap['button'];
+};
+function $<K extends keyof Elements>(id: K): Elements[K];
+function $(id: string): HTMLElement;
+function $(id: string): HTMLElement {
+  const element = document.getElementById(id);
+  if (!element) throw new Error(`Missing viewer element: ${id}`);
+  return element;
+}
 const api = window.viewer;
-const state = { files: [], index: 0, page: 0, pages: 1, generation: 0, result: null, gpu: null, gpuInfo: null, animation: null, slideshow: null, directory: '', capabilities: null, background: 0, thumbnailURLs: [], thumbnailGeneration: 0, busy: false };
-let gpuFailure = null;
-const niceBytes = n => n < 1024 ? `${n} B` : n < 1024 ** 2 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 ** 2).toFixed(1)} MB`;
-const number = n => Number(n).toLocaleString();
-function errorMessage(error) { return String(error?.message || error).replace(/^Error invoking remote method '[^']+': Error: /, ''); }
-function showError(error, title = 'Couldn’t open this image') {
+interface ViewerState {
+  files: ImageFile[]; index: number; page: number; pages: number; generation: number;
+  result: DisplayResult | null; gpu: GPUCanvas | null; gpuInfo: GPUInfo | null;
+  animation: GPUAnimation | null; slideshow: ReturnType<typeof setTimeout> | undefined;
+  directory: string; capabilities: Capabilities | null; background: number;
+  thumbnailURLs: string[]; thumbnailGeneration: number; busy: boolean;
+}
+const state: ViewerState = { files: [], index: 0, page: 0, pages: 1, generation: 0, result: null, gpu: null, gpuInfo: null, animation: null, slideshow: undefined, directory: '', capabilities: null, background: 0, thumbnailURLs: [], thumbnailGeneration: 0, busy: false };
+let gpuFailure: unknown = null;
+const niceBytes = (n: number) => n < 1024 ? `${n} B` : n < 1024 ** 2 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 ** 2).toFixed(1)} MB`;
+const number = (n: number) => Number(n).toLocaleString();
+function errorMessage(error: unknown) { return String(error instanceof Error ? error.message : error).replace(/^Error invoking remote method '[^']+': Error: /, ''); }
+function showError(error: unknown, title = 'Couldn’t open this image') {
   $('error-title').textContent = title; $('error-message').textContent = errorMessage(error); $('error').hidden = false;
   $('status').textContent = 'Unable to display image';
 }
 function hideError() { $('error').hidden = true; }
-function setPlaying(playing) {
+function setPlaying(playing: boolean) {
   $('play').setAttribute('aria-pressed', String(playing));
   $('play').setAttribute('aria-label', playing ? 'Pause animation or slideshow' : 'Play animation or slideshow');
-  $('play').querySelector('use').setAttribute('href', playing ? '#i-pause' : '#i-play');
+  $('play').querySelector('use')!.setAttribute('href', playing ? '#i-pause' : '#i-play');
 }
-function stopSlideshow() { clearTimeout(state.slideshow); state.slideshow = null; if (!state.animation?.playing) setPlaying(false); }
+function stopSlideshow() { clearTimeout(state.slideshow); state.slideshow = undefined; if (!state.animation?.playing) setPlaying(false); }
 function stopAnimation() { state.animation?.close(); state.animation = null; }
 function updatePageLabel() {
   $('page-controls').hidden = state.pages <= 1;
   $('page-label').textContent = `${state.animation ? 'Frame' : 'Page'} ${state.page + 1} / ${state.pages}`;
   $('page-prev').disabled = state.pages < 2; $('page-next').disabled = state.pages < 2;
 }
-function updateTransform(gpu) {
+function updateTransform(gpu: GPUCanvas) {
   $('zoom-value').textContent = `${(gpu.scale * 100).toFixed(gpu.scale < .1 ? 1 : 0)}%`;
   $('fit').setAttribute('aria-pressed', String(gpu.fitMode));
   $('flip').setAttribute('aria-pressed', String(gpu.flip[0] < 0));
 }
-function setMetadata(result) {
+function setMetadata(result: DisplayResult) {
   const { metadata: m, file } = result;
   $('detail-name').textContent = file.name;
   $('detail-format').textContent = `${m.format} · ${niceBytes(file.size)}`;
@@ -56,11 +123,11 @@ function updateNavigation() {
   $('previous').disabled = state.index <= 0; $('next').disabled = state.index >= state.files.length - 1;
   $('image-count').textContent = `${state.files.length} image${state.files.length === 1 ? '' : 's'}`;
   $('file-subtitle').textContent = `${state.index + 1} of ${state.files.length}`;
-  for (const button of $('filmstrip').children) button.setAttribute('aria-current', String(Number(button.dataset.index) === state.index));
+  for (const button of Array.from($('filmstrip').children) as HTMLButtonElement[]) button.setAttribute('aria-current', String(Number(button.dataset.index) === state.index));
   $('filmstrip').children[state.index]?.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
 }
 
-async function loadImage(index, { page = 0, preserve = false, keepSlideshow = false } = {}) {
+async function loadImage(index: number, { page = 0, preserve = false, keepSlideshow = false } = {}) {
   if (!state.files.length || index < 0 || index >= state.files.length) return;
   if (!keepSlideshow) stopSlideshow();
   stopAnimation();
@@ -74,14 +141,20 @@ async function loadImage(index, { page = 0, preserve = false, keepSlideshow = fa
   $('status').textContent = `Opening ${item.name}…`; updateNavigation();
   try {
     if (!state.gpu) throw gpuFailure || new Error('GPU rendering is unavailable.');
-    let result = await api.decode(item.id, { page, maxEdge: state.gpu.maxTextureSize });
+    const response = await api.decode(item.id, { page, maxEdge: state.gpu.maxTextureSize });
     if (generation !== state.generation) return;
-    let bitmap;
-    if (result.browser) {
+    let bitmap: ImageBitmap;
+    let result: DisplayResult;
+    if (response.browser) {
       const decoded = await browserBitmap(await api.original(item.id), item.extension, state.gpu.maxTextureSize);
       bitmap = decoded.bitmap;
-      result = { ...result, ...decoded }; delete result.bitmap;
-    } else bitmap = await pngBitmap(result.bytes);
+      const { bitmap: _bitmap, ...preview } = decoded;
+      result = { ...preview, file: response.file };
+    } else {
+      result = response;
+      if (!result.bytes) throw new Error('Decoder returned no image.');
+      bitmap = await pngBitmap(result.bytes);
+    }
     if (generation !== state.generation) { bitmap.close(); return; }
     state.result = result; state.pages = result.metadata.pages;
     // Use source dimensions for zoom percentages even when a preview is reduced.
@@ -101,15 +174,15 @@ async function loadImage(index, { page = 0, preserve = false, keepSlideshow = fa
   }
 }
 
-async function setupAnimation(item, generation, result) {
-  const type = ({ GIF: 'image/gif', WEBP: 'image/webp', PNG: 'image/png', AVIF: 'image/avif', HEIF: item.extension === 'AVIF' ? 'image/avif' : null })[result.metadata.format];
+async function setupAnimation(item: ImageFile, generation: number, result: DisplayResult) {
+  const type = ({ GIF: 'image/gif', WEBP: 'image/webp', PNG: 'image/png', AVIF: 'image/avif', HEIF: item.extension === 'AVIF' ? 'image/avif' : null } as Record<string, string | null>)[result.metadata.format];
   if (!type) return;
   let animation;
   try {
     const bytes = await api.original(item.id);
     if (!bytes || generation !== state.generation) return;
     animation = await GPUAnimation.create(bytes, type, {
-      draw: frame => state.gpu.setFrame(frame),
+      draw: frame => state.gpu?.setFrame(frame),
       onFrame: index => { if (generation === state.generation) { state.page = index; updatePageLabel(); } },
       onPlaying: playing => { if (generation === state.generation) setPlaying(playing); },
       onError: error => { if (generation === state.generation) showError(error, 'Animation playback stopped'); }
@@ -125,7 +198,7 @@ async function setupAnimation(item, generation, result) {
   }
 }
 
-async function setSelection(selection) {
+async function setSelection(selection: Selection | null) {
   if (!selection) return;
   hideError();
   stopSlideshow(); stopAnimation(); state.generation++;
@@ -142,46 +215,46 @@ async function setSelection(selection) {
   }
 }
 
-let thumbObserver;
+let thumbObserver: IntersectionObserver | undefined;
 function buildFilmstrip() {
   thumbObserver?.disconnect();
   for (const url of state.thumbnailURLs) URL.revokeObjectURL(url);
   state.thumbnailURLs = [];
   const generation = ++state.thumbnailGeneration;
-  const queue = []; let active = 0;
+  const queue: HTMLButtonElement[] = []; let active = 0;
   const pump = () => {
     if (generation !== state.thumbnailGeneration || active >= 1 || !queue.length) return;
-    const button = queue.shift(); const item = state.files[Number(button.dataset.index)]; active++;
+    const button = queue.shift()!; const item = state.files[Number(button.dataset.index)]; active++;
     api.thumbnail(item.id).then(async bytes => {
       if (generation !== state.thumbnailGeneration) return;
-      return bytes?.browser ? browserThumbnail(await api.original(item.id), item.extension) : new Blob([bytes], { type: 'image/png' });
+      return 'browser' in bytes ? browserThumbnail(await api.original(item.id), item.extension) : new Blob([bytes], { type: 'image/png' });
     }).then(blob => {
-      if (generation !== state.thumbnailGeneration) return;
+      if (generation !== state.thumbnailGeneration || !blob) return;
       const url = URL.createObjectURL(blob); state.thumbnailURLs.push(url);
       const img = document.createElement('img'); img.src = url; img.alt = ''; img.draggable = false;
-      button.firstChild.replaceWith(img);
+      button.firstChild!.replaceWith(img);
     }).catch(() => { if (generation === state.thumbnailGeneration) button.title = `${item.name} — preview unavailable`; })
       .finally(() => { active--; pump(); });
   };
   thumbObserver = new IntersectionObserver(entries => {
-    for (const entry of entries) if (entry.isIntersecting) { thumbObserver.unobserve(entry.target); queue.push(entry.target); }
+    for (const entry of entries) if (entry.isIntersecting) { thumbObserver!.unobserve(entry.target); queue.push(entry.target as HTMLButtonElement); }
     pump();
   }, { root: $('filmstrip'), rootMargin: '0px 180px' });
   const fragment = document.createDocumentFragment();
   state.files.forEach((file, index) => {
-    const button = document.createElement('button'); button.className = 'thumbnail'; button.dataset.index = index; button.title = file.name; button.setAttribute('aria-label', `Open ${file.name}`);
+    const button = document.createElement('button'); button.className = 'thumbnail'; button.dataset.index = String(index); button.title = file.name; button.setAttribute('aria-label', `Open ${file.name}`);
     const placeholder = document.createElement('span'); placeholder.className = 'thumb-placeholder';
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', '#i-image'); svg.append(use); placeholder.append(svg);
     const name = document.createElement('span'); name.textContent = file.name;
     button.append(placeholder, name); button.addEventListener('click', () => loadImage(index)); fragment.append(button);
   });
   $('filmstrip').replaceChildren(fragment);
-  for (const button of $('filmstrip').children) thumbObserver.observe(button);
+  for (const button of Array.from($('filmstrip').children) as HTMLButtonElement[]) thumbObserver!.observe(button);
 }
 
 async function open(folder = false) { try { await setSelection(await api.open(folder)); } catch (error) { showError(error); } }
-function navigate(delta) { return loadImage(state.index + delta); }
-async function pageStep(delta) {
+function navigate(delta: number) { return loadImage(state.index + delta); }
+async function pageStep(delta: number) {
   if (!state.result || state.busy || state.pages <= 1) return;
   stopSlideshow();
   const page = (state.page + delta + state.pages) % state.pages;
@@ -255,23 +328,23 @@ $('reveal').onclick = () => { if (state.files[state.index]) api.reveal(state.fil
 $('error-dismiss').onclick = hideError;
 for (const id of ['gpu-badge', 'formats-link', 'formats-footer']) $(id).onclick = showDiagnostics;
 $('help').onclick = () => $('shortcuts').showModal();
-for (const button of document.querySelectorAll('.dialog-close')) button.onclick = () => button.closest('dialog').close();
+for (const button of document.querySelectorAll<HTMLButtonElement>('.dialog-close')) button.onclick = () => button.closest('dialog')?.close();
 for (const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
 document.addEventListener('keydown', event => {
-  if (document.querySelector('dialog[open]') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+  if (document.querySelector('dialog[open]') || ['INPUT', 'TEXTAREA', 'SELECT'].includes((event.target as HTMLElement | null)?.tagName || '')) return;
   const key = event.key.toLowerCase();
   if ((event.ctrlKey || event.metaKey) && key === 'o') { event.preventDefault(); open(event.shiftKey); return; }
   if (event.ctrlKey || event.metaKey || event.altKey) return;
-  const actions = { arrowleft: () => navigate(-1), arrowright: () => navigate(1), '+': () => state.gpu?.zoom(1.25), '=': () => state.gpu?.zoom(1.25), '-': () => state.gpu?.zoom(.8), '0': () => state.gpu?.fit(), '1': () => state.gpu?.actualSize(), r: () => state.gpu?.rotate(event.shiftKey ? -1 : 1), h: () => state.gpu?.flipHorizontal(), f: () => api.fullscreen(), i: toggleInfo, b: cycleBackground, p: togglePixel, ' ': togglePlay, pageup: () => pageStep(-1), pagedown: () => pageStep(1), '?': () => $('shortcuts').showModal(), escape: () => { stopSlideshow(); state.animation?.pause(); hideError(); } };
+  const actions: Record<string, () => unknown> = { arrowleft: () => navigate(-1), arrowright: () => navigate(1), '+': () => state.gpu?.zoom(1.25), '=': () => state.gpu?.zoom(1.25), '-': () => state.gpu?.zoom(.8), '0': () => state.gpu?.fit(), '1': () => state.gpu?.actualSize(), r: () => state.gpu?.rotate(event.shiftKey ? -1 : 1), h: () => state.gpu?.flipHorizontal(), f: () => api.fullscreen(), i: toggleInfo, b: cycleBackground, p: togglePixel, ' ': togglePlay, pageup: () => pageStep(-1), pagedown: () => pageStep(1), '?': () => $('shortcuts').showModal(), escape: () => { stopSlideshow(); state.animation?.pause(); hideError(); } };
   if (actions[key]) { event.preventDefault(); actions[key](); }
 });
 let dragDepth = 0;
-document.addEventListener('dragenter', event => { event.preventDefault(); if (event.dataTransfer.types.includes('Files')) { dragDepth++; $('drop-overlay').hidden = false; } });
+document.addEventListener('dragenter', event => { event.preventDefault(); if (event.dataTransfer?.types.includes('Files')) { dragDepth++; $('drop-overlay').hidden = false; } });
 document.addEventListener('dragover', event => { event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'; });
 document.addEventListener('dragleave', event => { event.preventDefault(); if (--dragDepth <= 0) { dragDepth = 0; $('drop-overlay').hidden = true; } });
 document.addEventListener('drop', async event => {
   event.preventDefault(); dragDepth = 0; $('drop-overlay').hidden = true;
-  if (!event.dataTransfer.files.length) return;
+  if (!event.dataTransfer?.files.length) return;
   try { await setSelection(await api.openDropped(Array.from(event.dataTransfer.files))); } catch (error) { showError(error); }
 });
 api.onSelection(selection => setSelection(selection)); api.onError(error => showError(error)); api.onDiagnostics(showDiagnostics);

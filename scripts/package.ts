@@ -1,11 +1,14 @@
-const path = require('node:path');
-const fs = require('node:fs/promises');
+// SPDX-License-Identifier: Apache-2.0
+import { build } from './build.js';
+import type { OfficialPlatform, OfficialArch } from '@electron/packager';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
 async function main() {
   if (!process.versions.bun) throw new Error('Run packaging with Bun.');
   const { packager } = await import('@electron/packager');
   const directories = await packager({
-    dir: path.resolve(__dirname, '..'), name: 'Prism', executableName: 'prism',
-    out: 'dist', platform: process.platform, arch: process.arch, overwrite: true,
+    dir: await build(), name: 'Prism', executableName: 'prism',
+    out: path.resolve(__dirname, '..', 'dist'), platform: process.platform as OfficialPlatform, arch: process.arch as OfficialArch, overwrite: true,
     electronVersion: require('electron/package.json').version,
     download: { checksums: require('electron/checksums.json') },
     // Keep the Bun decoder runtime and worker scripts directly accessible.

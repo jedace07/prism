@@ -1,9 +1,17 @@
+// SPDX-License-Identifier: Apache-2.0
+export interface AnimationCallbacks { draw(frame: VideoFrame): void; onFrame(index: number): void; onPlaying(playing: boolean): void; onError(error: unknown): void }
+interface AnimationOptions extends AnimationCallbacks { decoder: ImageDecoder; track: ImageTrack }
 export class GPUAnimation {
-  constructor({ decoder, track, draw, onFrame, onPlaying, onError }) {
-    Object.assign(this, { decoder, track, draw, onFrame, onPlaying, onError });
+  decoder: ImageDecoder; track: ImageTrack;
+  draw: AnimationCallbacks['draw']; onFrame: AnimationCallbacks['onFrame'];
+  onPlaying: AnimationCallbacks['onPlaying']; onError: AnimationCallbacks['onError'];
+  count: number; index = 0; playing = false; closed = false; serial = 0; loops = 0;
+  timer: ReturnType<typeof setTimeout> | undefined;
+  constructor({ decoder, track, draw, onFrame, onPlaying, onError }: AnimationOptions) {
+    this.decoder = decoder; this.track = track; this.draw = draw; this.onFrame = onFrame; this.onPlaying = onPlaying; this.onError = onError;
     this.count = track.frameCount; this.index = 0; this.playing = false; this.closed = false; this.serial = 0; this.loops = 0;
   }
-  static async create(bytes, type, callbacks) {
+  static async create(bytes: Uint8Array<ArrayBuffer>, type: string, callbacks: AnimationCallbacks) {
     if (!('ImageDecoder' in window) || !await ImageDecoder.isTypeSupported(type)) return null;
     const decoder = new ImageDecoder({ data: bytes, type, preferAnimation: true });
     try {
@@ -13,7 +21,7 @@ export class GPUAnimation {
       return new GPUAnimation({ decoder, track, ...callbacks });
     } catch (error) { decoder.close(); throw error; }
   }
-  async show(index, serial) {
+  async show(index: number, serial: number) {
     const { image } = await this.decoder.decode({ frameIndex: index, completeFramesOnly: true });
     try {
       if (this.closed || serial !== this.serial) return null;
@@ -29,7 +37,7 @@ export class GPUAnimation {
   pause() {
     this.playing = false; this.serial++; clearTimeout(this.timer); this.onPlaying(false);
   }
-  async tick(serial) {
+  async tick(serial: number) {
     if (this.closed || !this.playing || serial !== this.serial) return;
     const started = performance.now();
     try {
@@ -45,7 +53,7 @@ export class GPUAnimation {
       }, Math.max(0, duration - (performance.now() - started)));
     } catch (error) { if (!this.closed && serial === this.serial) { this.pause(); this.onError(error); } }
   }
-  async seek(index) {
+  async seek(index: number) {
     this.pause();
     try { await this.show(((index % this.count) + this.count) % this.count, this.serial); }
     catch (error) { if (!this.closed) this.onError(error); }

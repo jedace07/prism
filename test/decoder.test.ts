@@ -1,13 +1,14 @@
-const { test, before, after } = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs/promises');
-const os = require('node:os');
-const path = require('node:path');
-const { decode, probe, capabilities, targetSize } = require('../src/decoder.cjs');
-const { isImage } = require('../src/formats.cjs');
-const { DecodeService } = require('../src/decode-service.cjs');
-const { png, readPNG, bmp, gif, orientJPEG } = require('../src/test-images.cjs');
-let temp, source;
+// SPDX-License-Identifier: Apache-2.0
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { decode, probe, capabilities, targetSize } from '../src/decoder.js';
+import { isImage } from '../src/formats.js';
+import { DecodeService } from '../src/decode-service.js';
+import { png, readPNG, bmp, gif, orientJPEG } from '../src/test-images.js';
+let temp: string, source: string;
 before(async () => {
   temp = await fs.mkdtemp(path.join(os.tmpdir(), 'prism-test-'));
   source = path.join(temp, 'source.png');
@@ -27,18 +28,18 @@ test('file discovery reflects Bun and browser image candidates', () => {
   for (const name of ['a.js','a.psd','a.cr3','a.exr','a.pdf']) assert.equal(isImage(name), false);
 });
 test('Bun.Image output preserves straight-alpha PNG pixels and bounded thumbnails', async () => {
-  const result = await decode(source);
+  const result = await decode(source); assert.ok(!result.browser && result.bytes);
   assert.equal(result.encoding, 'png'); assert.equal(result.metadata.decoder, 'Bun.Image');
   assert.deepEqual([...readPNG(result.bytes).bytes.subarray(0,4)], [240,20,40,128]);
-  const small = await decode(source, { maxEdge:16 });
+  const small = await decode(source, { maxEdge:16 }); assert.ok(!small.browser && small.bytes);
   assert.equal(small.width,16); assert.equal(small.height,8); assert.equal(small.reduced,true);
-  const thumb = await decode(source,{thumbnail:true});
+  const thumb = await decode(source,{thumbnail:true}); assert.ok(!thumb.browser && thumb.bytes);
   assert.ok(readPNG(thumb.bytes).width<=200);
 });
 test('Bun.Image applies EXIF orientation to metadata and the encoded preview', async () => {
   const jpeg=await new Bun.Image(png(64,32,[255,0,0,255])).jpeg().buffer();
   const file=path.join(temp,'orientation.jpg');await fs.writeFile(file,orientJPEG(jpeg));
-  const result=await decode(file);
+  const result=await decode(file); assert.ok(!result.browser && result.bytes);
   assert.equal(result.width,32);assert.equal(result.height,64);assert.equal(result.metadata.width,32);assert.equal(result.metadata.height,64);
 });
 test('Bun.Image decodes JPEG, lossless WebP, BMP and the first GIF frame', async t => {
@@ -47,9 +48,9 @@ test('Bun.Image decodes JPEG, lossless WebP, BMP and the first GIF frame', async
     ['jpeg',await new Bun.Image(input).jpeg({quality:95}).buffer(),32,24],
     ['webp',await new Bun.Image(input).webp({lossless:true}).buffer(),32,24],
     ['bmp',bmp(32,24),32,24],['gif',gif(),2,2]
-  ]) await t.test(extension,async()=>{
+  ] as [string, Uint8Array, number, number][]) await t.test(extension,async()=>{
     const file=path.join(temp,`sample.${extension}`);await fs.writeFile(file,bytes);
-    const result=await decode(file), decoded=readPNG(result.bytes);
+    const result=await decode(file); assert.ok(!result.browser && result.bytes); const decoded=readPNG(result.bytes);
     assert.equal(decoded.width,w);assert.equal(decoded.height,h);
     assert.ok(decoded.bytes[0]>245&&decoded.bytes[1]<10&&decoded.bytes[2]<10);
   });
@@ -65,13 +66,14 @@ test('pixel limit rejects a decompression-bomb header before decoding',async()=>
   await assert.rejects(probe(file));
 });
 test('file paths containing brackets and colons are treated as literal filenames',async()=>{
-  const file=path.join(temp,'test [0]: literal.png');await fs.copyFile(source,file);assert.equal((await decode(file)).width,64);
+  const file=path.join(temp,'test [0]: literal.png');await fs.copyFile(source,file);const result = await decode(file); assert.ok(!result.browser); assert.equal(result.width,64);
 });
 test('Bun subprocess recovers from an error and preserves concurrent PNG payloads',async()=>{
   const service=new DecodeService();
   try {
     await assert.rejects(service.request('decode',source,{page:2}),/first image/);
     const [full,thumb,c]=await Promise.all([service.request('decode',source),service.request('decode',source,{thumbnail:true}),service.request('capabilities')]);
+    assert.ok(!full.browser && full.bytes && !thumb.browser && thumb.bytes);
     assert.deepEqual([...readPNG(full.bytes).bytes.subarray(0,4)],[240,20,40,128]);
     assert.equal(readPNG(thumb.bytes).width,64);assert.equal(c.engine,'Bun.Image');assert.equal('magick' in c,false);
   } finally {await service.close();}

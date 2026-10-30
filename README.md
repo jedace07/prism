@@ -4,17 +4,18 @@ A local Electron image viewer. Bun.Image decodes and resizes previews in the bun
 
 ## Development
 
-Use **Bun 1.4.4+** for dependencies and scripts. No separate host Node.js, compiler, Sharp or ImageMagick installation is required.
+The source, preload, renderer, decoder, scripts and tests are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts. No separate host Node.js, compiler, Sharp or ImageMagick installation is required.
 
 ```sh
 bun install --frozen-lockfile
+bun run typecheck
 bun run start
 bun run start /path/to/photo.png
 ```
 
 `./start.sh` also starts the app through Bun. Opening a single image discovers its siblings; opening several files keeps the selected set. Folders are scanned without recursion, with natural sorting and a 10,000-entry limit. Drag images or folders into the window, or choose **All files** to try an unrecognized extension.
 
-Build/package the application on GitHub runners, as described below. Local development and unit tests do not require installing anything into an image-based OS. `AGENTS.md` records this workflow.
+Build/package the application on GitHub runners, as described below. Unit tests and type checking execute TypeScript directly without building the app. `bun run start` explicitly compiles into `.build/app` before launching Electron; GitHub packaging uses that same compilation step. No host OS packages are required. `AGENTS.md` records this workflow.
 
 ## Rendering and formats
 
@@ -55,15 +56,17 @@ Use Command in place of Ctrl on macOS.
 
 ## GitHub test artifacts
 
-Open **Actions → Build Linux Flatpak → Run workflow**. The workflow installs locked dependencies with Bun, runs unit and WebGL smoke tests, prepares Electron and the bundled Bun runtime, packages the Flatpak, and verifies its decoder subprocess in the Platform runtime. The manifest only copies the prepared application and desktop files; it compiles no image dependencies.
+Open **Actions → Build Linux Flatpak → Run workflow**. The workflow installs locked dependencies with Bun, checks TypeScript, runs unit and WebGL smoke tests, prepares Electron and the bundled Bun runtime, packages the Flatpak, and verifies its decoder subprocess in the Platform runtime. The manifest only copies the prepared application and desktop files; it compiles no image dependencies.
 
 Download and extract `Prism-linux-flatpak-x86_64-<run number>` from a successful run:
 
 ```sh
 sha256sum -c SHA256SUMS
-flatpak install --user ./Prism-x86_64.flatpak
+flatpak install --system ./Prism-x86_64.flatpak
 flatpak run io.github.prismviewer.Prism
 ```
+
+Installations default to the system scope and use its Flathub remote. To deliberately install per user, replace `--system` with `--user`; that scope needs its own runtime/remote setup.
 
 The artifact includes the bundle, checksum, source/build information and decoder report, and expires after 14 days. Test hardware GPU rendering on your own desktop using the GPU diagnostics. Runner WebGL tests explicitly use software rendering; they verify pixels and interactions, not physical GPU acceleration.
 
@@ -80,10 +83,14 @@ PRISM_SMOKE_HARDWARE=1 bun run test:smoke
 
 Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP decoding, literal filenames, size limits, unsupported formats, and the subprocess protocol. Desktop tests exercise WebGL pixels and transforms, thumbnails, SVG fallback, GIF playback, file navigation and renderer isolation. CI uses Xvfb and explicit SwiftShader; only its disposable root smoke test disables Chromium's root-user sandbox check. Normal launches retain sandboxing and use Zypak inside Flatpak.
 
-- `src/decoder.cjs`: Bun.Image previews and capabilities.
-- `src/decode-service.cjs`, `src/decode-worker.cjs`, `src/decoder-protocol.cjs`: bounded subprocess work and binary PNG transport.
-- `src/renderer/gpu.js`: WebGL2 texture uploads and shaders.
-- `src/renderer/browser-images.js`: bitmap creation and browser-only formats.
-- `src/renderer/animation.js`: Chromium frame decoding and timed texture uploads.
+- `src/decoder.ts`: Bun.Image previews and capabilities.
+- `src/decode-service.ts`, `src/decode-worker.ts`, `src/decoder-protocol.ts`: bounded subprocess work and binary PNG transport.
+- `src/renderer/gpu.ts`: WebGL2 texture uploads and shaders.
+- `src/renderer/browser-images.ts`: bitmap creation and browser-only formats.
+- `src/renderer/animation.ts`: Chromium frame decoding and timed texture uploads.
 
 The renderer uses context isolation, no Node integration, a restrictive CSP, denied navigation/popups and denied network requests. IPC checks the calling frame and authorizes image access using file tokens. Bun and its upstream license notices are bundled, so installed artifacts need neither host Bun nor Node.js.
+
+## License
+
+Prism is licensed under [Apache-2.0](LICENSE); see [NOTICE](NOTICE). Bundled third-party components retain their own license notices.

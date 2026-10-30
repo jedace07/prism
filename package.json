@@ -3,26 +3,31 @@
   "version": "1.0.0",
   "private": true,
   "description": "A local Electron image viewer with WebGL2 rendering and broad native decoding",
-  "main": "src/main.cjs",
+  "main": ".build/app/src/main.js",
   "desktopName": "io.github.prismviewer.Prism.desktop",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "packageManager": "bun@1.4.4",
   "scripts": {
     "postinstall": "bun node_modules/electron/install.js",
-    "start": "bun scripts/start.cjs",
+    "start": "bun scripts/start.ts",
     "test": "bun test",
-    "test:smoke": "bun scripts/smoke.cjs",
-    "package": "bun scripts/package.cjs",
-    "flatpak:build": "bun scripts/flatpak.cjs build",
-    "flatpak:bundle": "bun scripts/flatpak.cjs bundle",
-    "flatpak:check": "bun scripts/flatpak.cjs check"
+    "test:smoke": "bun scripts/smoke.ts",
+    "package": "bun scripts/package.ts",
+    "flatpak:build": "bun scripts/flatpak.ts build",
+    "flatpak:bundle": "bun scripts/flatpak.ts bundle",
+    "flatpak:check": "bun scripts/flatpak.ts check",
+    "typecheck": "bun node_modules/typescript/bin/tsc --noEmit",
+    "build": "bun scripts/build.ts"
   },
   "engines": {
     "bun": ">=1.4.4"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
-    "electron": "^45.1.0"
+    "@types/bun": "^1.4.4",
+    "@types/dom-webcodecs": "^0.1.19",
+    "electron": "^45.1.0",
+    "typescript": "^7.0.2"
   },
   "trustedDependencies": [
     "electron"

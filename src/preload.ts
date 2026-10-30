@@ -1,10 +1,12 @@
-const { contextBridge, ipcRenderer, webUtils } = require('electron');
-const on = (channel, callback) => {
-  const listener = (_, value) => callback(value);
+// SPDX-License-Identifier: Apache-2.0
+import type { ViewerAPI } from './types.js';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
+const on = <T>(channel: string, callback: (value: T) => void) => {
+  const listener = (_: Electron.IpcRendererEvent, value: T) => callback(value);
   ipcRenderer.on(channel, listener);
   return () => ipcRenderer.removeListener(channel, listener);
 };
-contextBridge.exposeInMainWorld('viewer', {
+const viewer: ViewerAPI = {
   initial: () => ipcRenderer.invoke('initial'),
   open: folder => ipcRenderer.invoke('open', folder),
   openDropped: files => ipcRenderer.invoke('open-paths', Array.from(files, file => webUtils.getPathForFile(file)).filter(Boolean)),
@@ -19,4 +21,5 @@ contextBridge.exposeInMainWorld('viewer', {
   onError: callback => on('viewer-error', callback),
   onFullscreen: callback => on('fullscreen', callback),
   onDiagnostics: callback => on('show-diagnostics', callback)
-});
+};
+contextBridge.exposeInMainWorld('viewer', viewer);

@@ -1,33 +1,39 @@
+// SPDX-License-Identifier: Apache-2.0
+import type { App, BrowserWindow } from 'electron';
+import type { GPUInfo, Selection } from './types.js';
 // Opt-in integration harness; never loaded during normal application use.
-const fs = require('node:fs/promises');
-const os = require('node:os');
-const path = require('node:path');
-const assert = require('node:assert/strict');
-const { promisify } = require('node:util');
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import assert from 'node:assert/strict';
+import { promisify } from 'node:util';
 const execFile = promisify(require('node:child_process').execFile);
-const { DecodeService, getRuntimePath } = require('./decode-service.cjs');
+import { DecodeService, getRuntimePath } from './decode-service.js';
 async function capabilities() {
   const decoder = new DecodeService();
   try { return await decoder.request('capabilities'); } finally { await decoder.close(); }
 }
-async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
-  const checks = []; const errors = [];
+async function run({ window, choosePaths, gpuInfo, reportPath, app }: {
+  window: BrowserWindow; choosePaths(paths: string[]): Promise<Selection | null>;
+  gpuInfo(): Promise<GPUInfo>; reportPath: string; app: App;
+}) {
+  const checks: string[] = []; const errors: string[] = [];
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'prism-smoke-images-'));
-  const report = { passed: false, checks, errors, gpu: null, renderer: null };
-  const js = source => window.webContents.executeJavaScript(source);
-  const until = async (predicate, label, timeout = 15000) => {
+  const report: { passed: boolean; checks: string[]; errors: string[]; gpu: GPUInfo | null; renderer: unknown; failure?: string } = { passed: false, checks, errors, gpu: null, renderer: null };
+  const js = (source: string) => window.webContents.executeJavaScript(source);
+  const until = async (predicate: string, label: string, timeout = 15000) => {
     const end = Date.now() + timeout;
     while (Date.now() < end) { if (await js(predicate)) return; await new Promise(resolve => setTimeout(resolve, 40)); }
     throw new Error(`Timed out waiting for ${label}: ${await js('document.getElementById("error-message").textContent')}`);
   };
-  const select = async file => {
+  const select = async (file: string) => {
     const selection = await choosePaths([file]); window.webContents.send('selection', selection);
     await until(`document.getElementById('file-name').textContent === ${JSON.stringify(path.basename(file))} && document.getElementById('loading').hidden`, 'image decode');
     assert.equal(await js('document.getElementById("error").hidden'), true, await js('document.getElementById("error-message").textContent'));
     return selection;
   };
-  const pixel = (x, y) => js(`(() => { const c=document.getElementById('image-canvas'),g=c.getContext('webgl2');g.drawArrays(g.TRIANGLE_STRIP,0,4);const p=new Uint8Array(4),d=window.devicePixelRatio;g.readPixels(Math.floor(c.width/2+${x}*d),Math.floor(c.height/2+${y}*d),1,1,g.RGBA,g.UNSIGNED_BYTE,p);return Array.from(p);})()`);
-  const click = async id => { await js(`document.getElementById(${JSON.stringify(id)}).click()`); await js('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))'); };
+  const pixel = (x: number, y: number) => js(`(() => { const c=document.getElementById('image-canvas'),g=c.getContext('webgl2');g.drawArrays(g.TRIANGLE_STRIP,0,4);const p=new Uint8Array(4),d=window.devicePixelRatio;g.readPixels(Math.floor(c.width/2+${x}*d),Math.floor(c.height/2+${y}*d),1,1,g.RGBA,g.UNSIGNED_BYTE,p);return Array.from(p);})()`);
+  const click = async (id: string) => { await js(`document.getElementById(${JSON.stringify(id)}).click()`); await js('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))'); };
   window.webContents.on('console-message', details => { if (details.level === 'error') errors.push(details.message); });
   try {
     await until('document.body.dataset.ready === "true"', 'viewer initialization');
@@ -38,7 +44,7 @@ async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
     assert.equal(await js('document.getElementById("error").hidden'), true, await js('document.getElementById("error-message").textContent'));
     checks.push('WebGL2 context initialized with explicit rendering diagnostics');
 
-    await execFile(getRuntimePath(), [path.join(__dirname, 'smoke-fixtures.cjs'), temp]);
+    await execFile(getRuntimePath(), [path.join(__dirname, 'smoke-fixtures.js'), temp]);
     const image = path.join(temp, '01-quadrants.png');
     const selection = await select(image);
     assert.deepEqual(await pixel(-100, 100), [255, 0, 0, 255]);
@@ -87,7 +93,7 @@ async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
     assert.equal(errors.length, 0, `Renderer errors: ${errors.join('\n')}`);
     report.passed = true;
   } catch (error) {
-    report.failure = error.stack;
+    report.failure = error instanceof Error ? error.stack : String(error);
     await fs.writeFile(path.join(path.dirname(reportPath), 'failure.png'), (await window.webContents.capturePage()).toPNG()).catch(() => {});
   } finally {
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
@@ -95,4 +101,4 @@ async function run({ window, choosePaths, gpuInfo, reportPath, app }) {
     app.exit(report.passed ? 0 : 1);
   }
 }
-module.exports = { run };
+export { run };

@@ -1,10 +1,12 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { Writable } = require('node:stream');
-const { FrameReader, FrameWriter } = require('../src/decoder-protocol.cjs');
+// SPDX-License-Identifier: Apache-2.0
+import type { FrameMessage } from '../src/decoder-protocol.js';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Writable } from 'node:stream';
+import { FrameReader, FrameWriter } from '../src/decoder-protocol.js';
 
 test('binary transport preserves pixels across fragmented and coalesced frames', async () => {
-  const chunks = [];
+  const chunks: Buffer[] = [];
   const stream = new Writable({ write(chunk, _, callback) { chunks.push(Buffer.from(chunk)); callback(); } });
   const writer = new FrameWriter(stream);
   const pixels = Uint8Array.from({ length: 4096 }, (_, index) => index % 256);
@@ -15,11 +17,11 @@ test('binary transport preserves pixels across fragmented and coalesced frames',
   ]);
   const data = Buffer.concat(chunks);
   for (const size of [1, 7, 65536]) {
-    const messages = []; const reader = new FrameReader(message => messages.push(message));
+    const messages: FrameMessage[] = []; const reader = new FrameReader(message => messages.push(message));
     for (let offset = 0; offset < data.length; offset += size) reader.feed(data.subarray(offset, offset + size));
     assert.deepEqual(messages.map(m => m.id), [1, 2, 3]);
-    assert.deepEqual([...messages[0].result.bytes], [...pixels]);
-    assert.equal(messages[1].error, 'invalid image'); assert.equal(messages[2].result.format, 'PNG');
+    assert.deepEqual([...messages[0].result!.bytes!], [...pixels]);
+    assert.equal(messages[1].error, 'invalid image'); assert.equal(messages[2].result!.format, 'PNG');
   }
 });
 

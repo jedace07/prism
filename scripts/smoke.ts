@@ -1,7 +1,9 @@
-const { spawn } = require('node:child_process');
-const fs = require('node:fs/promises');
-const path = require('node:path');
-const os = require('node:os');
+// SPDX-License-Identifier: Apache-2.0
+import { build } from './build.js';
+import { spawn } from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import * as os from 'node:os';
 (async () => {
   const root = path.resolve(__dirname, '..');
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'prism-smoke-profile-'));
@@ -9,11 +11,11 @@ const os = require('node:os');
   const hardware = process.env.PRISM_SMOKE_HARDWARE === '1';
   const binary = process.env.PRISM_SMOKE_EXECUTABLE;
   const report = path.join(root, 'artifacts', binary ? 'smoke-packaged.json' : hardware ? 'smoke-hardware.json' : 'smoke.json');
-  const args = [...(binary ? [] : [root]), '--smoke', report, `--user-data-dir=${profile}`];
+  const args = [...(binary ? [] : [await build()]), '--smoke', report, `--user-data-dir=${profile}`];
   if (!hardware) args.push('--allow-software-rendering', '--use-angle=swiftshader', '--enable-unsafe-swiftshader');
   // Only the disposable root CI test bypasses Chromium's root-user check.
   if (process.env.CI === 'true' && process.getuid?.() === 0) args.push('--no-sandbox');
-  const env = { ...process.env, ELECTRON_ENABLE_LOGGING: '1' };
+  const env: NodeJS.ProcessEnv = { ...process.env, ELECTRON_ENABLE_LOGGING: '1' };
   delete env.ELECTRON_RUN_AS_NODE;
   if (!binary) env.PRISM_DECODER_RUNTIME = process.execPath;
   const child = spawn(binary || require('electron'), args, { stdio: 'inherit', env });

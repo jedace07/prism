@@ -27,7 +27,8 @@
         "install -Dm644 desktop/io.github.prismviewer.Prism.desktop /app/share/applications/io.github.prismviewer.Prism.desktop",
         "install -Dm644 desktop/io.github.prismviewer.Prism.metainfo.xml /app/share/metainfo/io.github.prismviewer.Prism.metainfo.xml",
         "install -Dm644 desktop/io.github.prismviewer.Prism.svg /app/share/icons/hicolor/scalable/apps/io.github.prismviewer.Prism.svg",
-        "install -Dm644 /app/lib/prism/resources/app/LICENSE /app/share/licenses/io.github.prismviewer.Prism/LICENSE"
+        "install -Dm644 /app/lib/prism/resources/app/LICENSE /app/share/licenses/io.github.prismviewer.Prism/LICENSE",
+        "install -Dm644 /app/lib/prism/resources/app/NOTICE /app/share/licenses/io.github.prismviewer.Prism/NOTICE"
       ],
       "sources": [
         {

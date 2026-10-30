@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": ".build/app/src"
+  },
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/types.ts"
+  ]
+}
