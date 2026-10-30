@@ -29,7 +29,7 @@ From the extracted artifact directory:
 ```sh
 sha256sum -c SHA256SUMS
 flatpak install --system ./Prism-x86_64.flatpak
-flatpak run io.github.prismviewer.Prism
+flatpak run --system io.github.prismviewer.Prism
 ```
 
 Installation defaults to **system** scope, so the runtime is resolved using the system Flathub remote. If it is missing, add it explicitly with `flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo`. A per-user installation remains possible by choosing `--user`, but needs its own runtime/remote setup.

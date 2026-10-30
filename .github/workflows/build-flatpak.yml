@@ -99,7 +99,7 @@ jobs:
             echo '```sh'
             echo 'sha256sum -c SHA256SUMS'
             echo 'flatpak install --system ./Prism-x86_64.flatpak'
-            echo 'flatpak run io.github.prismviewer.Prism'
+            echo 'flatpak run --system io.github.prismviewer.Prism'
             echo '```'
             echo
             echo 'Decoder checks passed in the packaged runtime. Test hardware GPU rendering on your own desktop using the in-app GPU diagnostics.'

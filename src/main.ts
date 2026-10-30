@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ViewerAPI, GPUInfo } from './types.js';
-import { run as runSmoke } from './smoke.js';
 type Handlers = Pick<ViewerAPI, 'initial' | 'open' | 'decode' | 'thumbnail' | 'original' | 'capabilities' | 'gpu' | 'fullscreen' | 'reveal'> & { 'open-paths': (paths: string[]) => ReturnType<ViewerAPI['initial']> };
 import { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } from 'electron';
 import * as fs from 'node:fs/promises';
@@ -158,7 +157,10 @@ else {
       { label: 'View', submenu: [{ role: 'togglefullscreen' }, { role: 'toggleDevTools' }, { label: 'Rendering diagnostics', click: () => window!.webContents.send('show-diagnostics') }] }
     ] as Electron.MenuItemConstructorOptions[]));
     await window!.loadFile(indexFile);
-    if (smokeReport) runSmoke({ window, choosePaths, gpuInfo, reportPath: smokeReport, app }).catch(error => { console.error(error); app.exit(1); });
+    if (smokeReport) {
+      const { run } = await import('./smoke.js');
+      run({ window, choosePaths, gpuInfo, reportPath: smokeReport, app }).catch(error => { console.error(error); app.exit(1); });
+    }
   }).catch(error => { console.error(error); app.exit(1); });
 }
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

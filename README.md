@@ -63,7 +63,7 @@ Download and extract `Prism-linux-flatpak-x86_64-<run number>` from a successful
 ```sh
 sha256sum -c SHA256SUMS
 flatpak install --system ./Prism-x86_64.flatpak
-flatpak run io.github.prismviewer.Prism
+flatpak run --system io.github.prismviewer.Prism
 ```
 
 Installations default to the system scope and use its Flathub remote. To deliberately install per user, replace `--system` with `--user`; that scope needs its own runtime/remote setup.
@@ -76,7 +76,7 @@ The [workflow](.github/workflows/build-flatpak.yml) is manually triggered and re
 
 ```sh
 bun run test
-# Optional desktop tests; they open a window rather than building the app:
+# Optional desktop tests compile the app and open a window:
 bun run test:smoke
 PRISM_SMOKE_HARDWARE=1 bun run test:smoke
 ```
