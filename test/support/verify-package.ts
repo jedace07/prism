@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Run with Electron's embedded Node; native codecs stay in the Bun subprocess.
 import assert from 'node:assert/strict';
-import { DecodeService } from './decode-service.js';
+import { DecodeService } from '../../src/decode-service.js';
 import { readPNG } from './test-images.js';
 async function verify() {
   const service = new DecodeService();

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { App, BrowserWindow } from 'electron';
-import type { GPUInfo, Selection } from './types.js';
+import type { GPUInfo, Selection } from '../../src/types.js';
 // Opt-in integration harness; never loaded during normal application use.
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import assert from 'node:assert/strict';
 import { promisify } from 'node:util';
 const execFile = promisify(require('node:child_process').execFile);
-import { DecodeService, getRuntimePath } from './decode-service.js';
+import { DecodeService, getRuntimePath } from '../../src/decode-service.js';
 async function capabilities() {
   const decoder = new DecodeService();
   try {

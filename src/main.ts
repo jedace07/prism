@@ -335,7 +335,7 @@ if (!smokeReport && !app.requestSingleInstanceLock()) {
       );
       await window?.loadFile(indexFile);
       if (smokeReport) {
-        const { run } = await import('./smoke.js');
+        const { run } = await import('../test/support/smoke.js');
         run({ window, choosePaths, gpuInfo, reportPath: smokeReport, app }).catch((error) => {
           console.error(error);
           app.exit(1);

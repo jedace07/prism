@@ -7,7 +7,7 @@ import * as path from 'node:path';
 import { decode, probe, capabilities, targetSize } from '../src/decoder.js';
 import { isImage } from '../src/formats.js';
 import { DecodeService } from '../src/decode-service.js';
-import { png, readPNG, bmp, gif, orientJPEG } from '../src/test-images.js';
+import { png, readPNG, bmp, gif, orientJPEG } from './support/test-images.js';
 let temp: string, source: string;
 before(async () => {
   temp = await fs.mkdtemp(path.join(os.tmpdir(), 'prism-test-'));

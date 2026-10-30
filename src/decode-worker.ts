@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { FrameMessage } from './decoder-protocol.js';
 import type { DecodeOptions, DecoderMethods } from './types.js';
-import { verify } from './verify-codecs.js';
+import { verify } from '../test/support/verify-codecs.js';
 // Bun owns decoding and stdin polling; Electron never loads a native image addon.
 import * as decoder from './decoder.js';
 import { FrameReader, FrameWriter } from './decoder-protocol.js';

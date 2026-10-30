@@ -4,9 +4,9 @@
     "module": "Node16",
     "moduleResolution": "Node16",
     "noEmit": false,
-    "rootDir": "src",
-    "outDir": ".build/app/src"
+    "rootDir": ".",
+    "outDir": ".build/app"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "test/support/**/*.ts"],
   "exclude": ["src/renderer"]
 }

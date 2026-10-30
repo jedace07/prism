@@ -35,7 +35,7 @@ async function main() {
       },
     ],
     ignore:
-      /^\/(?:\.tools|\.git|\.github|\.agents|\.codex|\.aws|\.flatpak-builder|\.flatpak-build|\.flatpak-repo|flatpak|test|scripts|artifacts|dist|AGENTS\.md)(?:\/|$)/,
+      /^\/(?:\.tools|\.git|\.github|\.agents|\.codex|\.aws|\.flatpak-builder|\.flatpak-build|\.flatpak-repo|flatpak|scripts|artifacts|dist|AGENTS\.md)(?:\/|$)/,
   });
   console.log(`Portable application: ${directories.join(', ')}`);
 }

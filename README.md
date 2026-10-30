@@ -80,6 +80,8 @@ PRISM_SMOKE_HARDWARE=1 bun run test:smoke
 
 Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP decoding, literal filenames, size limits, unsupported formats, and the subprocess protocol. Desktop tests exercise WebGL pixels and transforms, thumbnails, SVG fallback, GIF playback, file navigation and renderer isolation. CI uses Xvfb and explicit SwiftShader; only its disposable root smoke test disables Chromium's root-user sandbox check. Normal launches retain sandboxing and use Zypak inside Flatpak.
 
+Tests live in `test/`. The integration harness and image fixtures live in `test/support/` and compile to a separate directory alongside `src/` in the application build so CI can verify installed Windows and Flatpak packages.
+
 - `src/decoder.ts`: Bun.Image previews and capabilities.
 - `src/decode-service.ts`, `src/decode-worker.ts`, `src/decoder-protocol.ts`: bounded subprocess work and binary PNG transport.
 - `src/renderer/gpu.ts`: WebGL2 texture uploads and shaders.

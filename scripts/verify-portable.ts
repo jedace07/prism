@@ -14,7 +14,8 @@ async function main(): Promise<void> {
     path.dirname(executable),
     'resources',
     'app',
-    'src',
+    'test',
+    'support',
     'verify-package.js',
   );
   await fs.access(executable);

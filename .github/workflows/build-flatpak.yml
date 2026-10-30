@@ -59,7 +59,7 @@ jobs:
           mkdir -p artifacts
           flatpak build --runtime --readonly --unshare=network .flatpak-build \
             env ELECTRON_RUN_AS_NODE=1 \
-            /app/lib/prism/prism /app/lib/prism/resources/app/src/verify-package.js \
+            /app/lib/prism/prism /app/lib/prism/resources/app/test/support/verify-package.js \
             > artifacts/flatpak-capabilities.json
       - name: Prepare versioned distribution
         run: bun scripts/prepare-artifacts.ts

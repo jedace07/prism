@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Preview, VerifyReport } from './types.js';
+import type { Preview, VerifyReport } from '../../src/types.js';
 // Runs only in the bundled Bun decoder, without external image libraries/tools.
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { capabilities, decode } from './decoder.js';
+import { capabilities, decode } from '../../src/decoder.js';
 import { png, readPNG, bmp, gif, orientJPEG } from './test-images.js';
 async function verify(): Promise<VerifyReport> {
   const report = await capabilities();
