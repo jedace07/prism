@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.3 - 2026-10-31
+
+- Center the toolbar placeholder and filename in the window, with equal space reserved for the controls on either side.
+- Truncate long filenames and subtitles so they stay clear of the toolbar controls.
+- Simplify packaging and release preparation by removing the bundled verification utilities and their CI steps.
+
 ## 0.1.0-alpha.2 - 2026-10-30
 
 - Replace the Windows portable ZIP with an offline NSIS installation wizard, with installation folder selection, Start menu and desktop shortcuts, and Windows uninstall support.

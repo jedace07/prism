@@ -2,10 +2,10 @@
 
 ## Install a prerelease
 
-Download the versioned `.flatpak` from [GitHub Releases](https://github.com/jedace07/prism/releases), together with `SHA256SUMS` if you want to verify its checksum. The current version is `0.1.0-alpha.2`.
+Download the versioned `.flatpak` from [GitHub Releases](https://github.com/jedace07/prism/releases), together with `SHA256SUMS` if you want to verify its checksum. The current version is `0.1.0-alpha.3`.
 
 ```sh
-flatpak install ./Prism-0.1.0-alpha.2-linux-x86_64.flatpak
+flatpak install ./Prism-0.1.0-alpha.3-linux-x86_64.flatpak
 flatpak run io.github.prismviewer.Prism
 ```
 

@@ -1,6 +1,6 @@
 {
   "name": "prism-image-viewer",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": true,
   "description": "A local Electron image viewer with WebGL2 rendering and broad native decoding",
   "main": ".build/app/src/main.js",

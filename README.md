@@ -56,13 +56,13 @@ Use Command in place of Ctrl on macOS.
 
 ## Downloads
 
-Download versioned builds from [GitHub Releases](https://github.com/jedace07/prism/releases). The current release is **0.1.0-alpha.2**, published as a prerelease while Prism is early in development.
+Download versioned builds from [GitHub Releases](https://github.com/jedace07/prism/releases). The current release is **0.1.0-alpha.3**, published as a prerelease while Prism is early in development.
 
-- **Windows x64:** run `Prism-0.1.0-alpha.2-windows-x64-setup.exe`. The wizard lets you choose an installation folder and install for your account or all users (administrator permission required). Launch Prism from the Start menu or desktop shortcut; remove it through Windows Settings → Apps → Installed apps. Electron and Bun are bundled in the offline installer. The installer is unsigned. If you used the earlier portable release, you can delete its extracted folder after installing.
-- **Linux x86_64:** download `Prism-0.1.0-alpha.2-linux-x86_64.flatpak` and install it:
+- **Windows x64:** run `Prism-0.1.0-alpha.3-windows-x64-setup.exe`. The wizard lets you choose an installation folder and install for your account or all users (administrator permission required). Launch Prism from the Start menu or desktop shortcut; remove it through Windows Settings → Apps → Installed apps. Electron and Bun are bundled in the offline installer. The installer is unsigned. If you used the earlier portable release, you can delete its extracted folder after installing.
+- **Linux x86_64:** download `Prism-0.1.0-alpha.3-linux-x86_64.flatpak` and install it:
 
 ```sh
-flatpak install --system ./Prism-0.1.0-alpha.2-linux-x86_64.flatpak
+flatpak install --system ./Prism-0.1.0-alpha.3-linux-x86_64.flatpak
 flatpak run --system io.github.prismviewer.Prism
 ```
 
