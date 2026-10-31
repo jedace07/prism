@@ -80,13 +80,19 @@ svg {
 }
 .toolbar {
   height: 84px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) minmax(0, 2fr) minmax(340px, 1fr);
   align-items: center;
   gap: 25px;
   padding: 0 24px;
   border-bottom: 1px solid var(--line);
   background: #17181d;
   flex-shrink: 0;
+}
+.toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: inherit;
 }
 .brand {
   display: flex;
@@ -147,16 +153,17 @@ svg {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  flex: 1;
   text-align: center;
   gap: 3px;
+}
+.file-heading > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .file-heading strong {
   font-size: 13px;
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .file-heading > span {
   font-size: 11px;
@@ -776,6 +783,7 @@ dialog::backdrop {
 }
 @media (max-width: 1100px) {
   .toolbar {
+    grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr) minmax(300px, 1fr);
     gap: 16px;
     padding: 0 18px;
   }
@@ -784,9 +792,6 @@ dialog::backdrop {
   }
   .brand {
     font-size: 20px;
-  }
-  .file-heading {
-    margin-left: 0;
   }
   .gpu-badge {
     font-size: 10px;
