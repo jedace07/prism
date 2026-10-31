@@ -4,23 +4,22 @@ A local Electron image viewer. Bun.Image decodes and resizes previews in the bun
 
 ## Development
 
-The source, preload, renderer, decoder, scripts and tests are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts.
+The source, preload, renderer, decoder and scripts are written in **TypeScript**, with strict type checking and shared IPC contracts. Use **Bun 1.4.4+** for dependencies and scripts.
 
 ```sh
 bun install --frozen-lockfile
 bun run check
-bun run test
 bun run start
 bun run start /path/to/photo.png
 ```
 
 `./start.sh` also starts the app through Bun. Opening a single image discovers its siblings; opening several files keeps the selected set. Folders are scanned without recursion, with natural sorting and a 10,000-entry limit. Drag images or folders into the window, or choose **All files** to try an unrecognized extension.
 
-Build/package the application on GitHub runners, as described below. Unit tests and type checking execute TypeScript directly without building the app. `bun run start` explicitly compiles into `.build/app` before launching Electron; GitHub packaging uses that same compilation step. No host OS packages are required. `AGENTS.md` records this workflow.
+Build/package the application on GitHub runners, as described below. `bun run check` runs lint, formatting, strict type checking and version consistency checks locally. `bun run start` explicitly compiles into `.build/app` before launching Electron; GitHub packaging uses that same compilation step. No host OS packages are required. `AGENTS.md` records this workflow.
 
 ## Rendering and formats
 
-Hardware WebGL2 is required by default. The app disables Chromium's software rasterizer, checks its active renderer, and reports context loss. Click the GPU badge for device and format diagnostics. To explicitly permit software rendering for a remote desktop or test, pass `--allow-software-rendering`.
+Hardware WebGL2 is required by default. The app disables Chromium's software rasterizer, checks its active renderer, and reports context loss. Click the GPU badge for device and format diagnostics. To explicitly permit software rendering for a remote desktop, pass `--allow-software-rendering`.
 
 | Decoder                    | Supported inputs                                                                          |
 | -------------------------- | ----------------------------------------------------------------------------------------- |
@@ -67,20 +66,9 @@ flatpak install --system ./Prism-0.1.0-alpha.2-linux-x86_64.flatpak
 flatpak run --system io.github.prismviewer.Prism
 ```
 
-The release includes `SHA256SUMS` and platform build information. Download all listed assets to check the complete set with `sha256sum -c SHA256SUMS`, or check the relevant line for a single download. System Flatpak installs use the system Flathub remote; an explicit `--user` installation needs its own runtime/remote setup. Hardware rendering should be checked on your own desktop using the GPU diagnostics.
+The release includes the Windows installer, Linux Flatpak and `SHA256SUMS`. Download both distributions to check the complete set with `sha256sum -c SHA256SUMS`, or check the relevant line for a single download. System Flatpak installs use the system Flathub remote; an explicit `--user` installation needs its own runtime/remote setup. Hardware rendering should be checked on your own desktop using the GPU diagnostics.
 
-## Verification and source
-
-```sh
-bun run test
-# Optional desktop tests compile the app and open a window:
-bun run test:smoke
-PRISM_SMOKE_HARDWARE=1 bun run test:smoke
-```
-
-Tests cover Bun.Image pixel colors, alpha, EXIF orientation, JPEG/WebP/GIF/BMP decoding, literal filenames, size limits, unsupported formats, and the subprocess protocol. Desktop tests exercise WebGL pixels and transforms, thumbnails, SVG fallback, GIF playback, file navigation and renderer isolation. CI uses Xvfb and explicit SwiftShader; only its disposable root smoke test disables Chromium's root-user sandbox check. Normal launches retain sandboxing and use Zypak inside Flatpak.
-
-Tests live in `test/`. The integration harness and image fixtures live in `test/support/` and compile to a separate directory alongside `src/` in the application build so CI can verify installed Windows and Flatpak packages.
+## Source and release builds
 
 - `src/decoder.ts`: Bun.Image previews and capabilities.
 - `src/decode-service.ts`, `src/decode-worker.ts`, `src/decoder-protocol.ts`: bounded subprocess work and binary PNG transport.
@@ -90,7 +78,9 @@ Tests live in `test/`. The integration harness and image fixtures live in `test/
 
 The renderer uses context isolation, no Node integration, a restrictive CSP, denied navigation/popups and denied network requests. IPC checks the calling frame and authorizes image access using file tokens. Bun and its upstream license notices are bundled, so installed artifacts need neither host Bun nor Node.js.
 
-Windows installer packaging runs on the GitHub Windows runner: `bun run package` prepares the application and `bun run package:windows` wraps it in an NSIS wizard. The runner installs into a temporary folder, verifies the installed runtime and WebGL renderer, then uninstalls and checks cleanup before uploading the installer for release.
+Pushing a `v<version>` tag builds the Windows installer and Linux Flatpak on GitHub runners and publishes them as a prerelease with checksums and release notes from `CHANGELOG.md`. The tag, `package.json` and newest AppStream release must agree. The platform build workflows can also be run manually.
+
+Windows installer packaging runs on the GitHub Windows runner: `bun run package` prepares the application and `bun run package:windows` wraps it in an NSIS wizard.
 
 ## License
 

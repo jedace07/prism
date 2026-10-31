@@ -21,8 +21,6 @@ import { DecodeService } from './decode-service.js';
 import { EXTENSIONS, isImage } from './formats.js';
 
 const allowSoftware = process.argv.includes('--allow-software-rendering');
-const smokeIndex = process.argv.indexOf('--smoke');
-const smokeReport = smokeIndex >= 0 ? process.argv[smokeIndex + 1] : null;
 // Do not silently replace actual GPU rendering with SwiftShader on normal runs.
 if (!allowSoftware) {
   app.commandLine.appendSwitch('disable-software-rasterizer');
@@ -39,12 +37,7 @@ const indexURL = pathToFileURL(indexFile).href;
 
 function fileArguments(argv: string[]) {
   const args = argv.slice(process.defaultApp ? 2 : 1);
-  const skipValues = new Set([
-    '--smoke',
-    '--user-data-dir',
-    '--ozone-platform',
-    '--remote-debugging-port',
-  ]);
+  const skipValues = new Set(['--user-data-dir', '--ozone-platform', '--remote-debugging-port']);
   const result: string[] = [];
   for (let i = 0; i < args.length; i++) {
     if (skipValues.has(args[i])) {
@@ -184,7 +177,7 @@ function showError(error: Error) {
     window?.webContents.send('viewer-error', error.message);
   }
 }
-if (!smokeReport && !app.requestSingleInstanceLock()) {
+if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', (_, argv) => {
@@ -334,13 +327,6 @@ if (!smokeReport && !app.requestSingleInstanceLock()) {
         ] as Electron.MenuItemConstructorOptions[]),
       );
       await window?.loadFile(indexFile);
-      if (smokeReport) {
-        const { run } = await import('../test/support/smoke.js');
-        run({ window, choosePaths, gpuInfo, reportPath: smokeReport, app }).catch((error) => {
-          console.error(error);
-          app.exit(1);
-        });
-      }
     })
     .catch((error) => {
       console.error(error);

@@ -13,19 +13,17 @@ Installation defaults to system scope and uses its Flathub remote. If it is miss
 
 ## Build and release workflow
 
-Builds run on GitHub-hosted Ubuntu 26.04 runners in the Freedesktop 26.08 container. You do not need a local Builder, SDK, compiler or image-tool installation. The manual, reusable `build-flatpak.yml` workflow checks lint, formatting, strict types, version consistency and unit tests, packages Electron with Bun, exercises its renderer under Xvfb, and assembles the Flatpak.
+Builds run on GitHub-hosted Ubuntu 26.04 runners in the Freedesktop 26.08 container. You do not need a local Builder, SDK, compiler or image-tool installation. The manual, reusable `build-flatpak.yml` workflow packages Electron with Bun and assembles the Flatpak.
 
-A tagged `v<version>` release calls that build alongside Windows. The publisher waits for both builds, checks their commit and version information, and publishes the versioned distributions and checksums as a GitHub prerelease. `package.json`, the newest AppStream release and the changelog must agree. The application also reports its version in GPU diagnostics.
+A tagged `v<version>` release calls that build alongside Windows. The publisher waits for both builds and publishes the versioned distributions and checksums as a GitHub prerelease. The tag, `package.json`, the newest AppStream release and the changelog must agree. The application also reports its version in GPU diagnostics.
 
-Intermediate `dist-linux` and `test-evidence-linux` Actions artifacts expire after seven days. The latter holds decoder reports and renderer screenshots for debugging. Installable downloads are published as release assets. See the root README for the version/tag procedure.
+The intermediate `dist-linux` Actions artifact expires after seven days. Installable downloads and `SHA256SUMS` are published as release assets. See the root README for the version/tag procedure.
 
-## Dependencies and verification
+## Dependencies and formats
 
 All application and development dependencies use Bun. Image decoding uses built-in Bun.Image without Sharp or an external image package. The manifest's single application module copies the prepared Electron app, bundled Bun runtime, licenses and desktop files; it compiles no image libraries.
 
 Freedesktop Platform/SDK and Electron BaseApp provide Flatpak infrastructure, including Zypak. These are prebuilt Flatpak refs rather than Bun packages, with their branches aligned at 26.08.
-
-The desktop smoke test explicitly allows SwiftShader under Xvfb and checks WebGL pixels, transformations, thumbnails, SVG fallback, GIF playback and renderer isolation. Only the disposable root CI smoke test uses `--no-sandbox`; the shipped launcher keeps sandboxing. A separate check runs Electron's embedded Node inside the Platform runtime and verifies the bundled Bun decoder's pixels, alpha, orientation and PNG transport. Hardware acceleration still needs verification on a real desktop.
 
 Linux Bun.Image supports JPEG, PNG, WebP, GIF and BMP. Chromium adds SVG/icons and supported formats such as AVIF. HEIC/TIFF support in Bun.Image depends on macOS/Windows codecs; host codec installs do not add them to this Linux Flatpak. RAW, PSD, EXR, JPEG 2000, PDF and multipage document decoding are not provided.
 

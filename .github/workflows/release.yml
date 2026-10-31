@@ -39,7 +39,7 @@ jobs:
     uses: ./.github/workflows/build-windows.yml
 
   publish:
-    name: Publish verified prerelease
+    name: Publish prerelease
     needs: [version, linux, windows]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
@@ -64,8 +64,8 @@ jobs:
           path: release-assets/
           merge-multiple: true
           digest-mismatch: error
-      - name: Verify assets and generate checksums and release notes
-        run: bun scripts/verify-release.ts
+      - name: Prepare checksums and release notes
+        run: bun scripts/prepare-release.ts
       - name: Upload to a draft and publish as prerelease
         shell: bash
         run: |

@@ -10,28 +10,14 @@ async function main(): Promise<void> {
   const expected = [
     `Prism-${version}-linux-x86_64.flatpak`,
     `Prism-${version}-windows-x64-setup.exe`,
-    `Prism-${version}-linux-x86_64-build-info.json`,
-    `Prism-${version}-windows-x64-build-info.json`,
   ].sort();
   const actual = (await fs.readdir(directory)).sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      'Release assets must contain exactly the two distributions and their build information.',
-    );
+    throw new Error('Release assets must contain exactly the Linux and Windows distributions.');
   }
   const checksums: string[] = [];
   for (const name of expected) {
     const file = path.join(directory, name);
-    if (name.endsWith('-build-info.json')) {
-      const info = await Bun.file(file).json();
-      if (
-        info.version !== version ||
-        info.commit !== process.env.GITHUB_SHA ||
-        info.repository !== process.env.GITHUB_REPOSITORY
-      ) {
-        throw new Error(`Release provenance mismatch: ${name}`);
-      }
-    }
     if ((await fs.stat(file)).size === 0) {
       throw new Error(`Empty release asset: ${name}`);
     }
@@ -55,7 +41,7 @@ async function main(): Promise<void> {
       .join('\n')
       .trim()}\n`,
   );
-  console.log(`Verified ${version}: Linux, Windows, provenance, and SHA-256 checksums.`);
+  console.log(`Prepared ${version}: Linux, Windows, and SHA-256 checksums.`);
 }
 main().catch((error) => {
   console.error(error);

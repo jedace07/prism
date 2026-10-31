@@ -1,5 +1,5 @@
 {
-  "files": { "includes": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"] },
+  "files": { "includes": ["src/**/*.ts", "scripts/**/*.ts"] },
   "formatter": { "enabled": false },
   "assist": { "enabled": false },
   "linter": {

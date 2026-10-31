@@ -45,7 +45,7 @@ export class DecodeService {
   constructor() {
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
-    // Source tests run directly in Bun; packaged applications use emitted JS.
+    // Source runs directly in Bun; packaged applications use emitted JS.
     const worker = path.join(
       __dirname,
       fs.existsSync(path.join(__dirname, 'decode-worker.ts'))

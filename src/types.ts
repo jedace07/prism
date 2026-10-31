@@ -66,17 +66,10 @@ export interface GPUInfo {
   electron?: string;
   chromium?: string;
 }
-export interface VerifyReport extends Capabilities {
-  passed: boolean;
-  checks: string[];
-  runtime?: string;
-  bytes?: Uint8Array<ArrayBuffer>;
-}
 export interface DecoderMethods {
   decode: { args: [file: string, options?: DecodeOptions]; result: DecodeResult };
   probe: { args: [file: string]; result: ImageMetadata };
   capabilities: { args: []; result: Capabilities };
-  verify: { args: []; result: VerifyReport };
 }
 export interface ViewerAPI {
   initial(): Promise<Selection | null>;

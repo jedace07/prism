@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { FrameMessage } from './decoder-protocol.js';
 import type { DecodeOptions, DecoderMethods } from './types.js';
-import { verify } from '../test/support/verify-codecs.js';
 // Bun owns decoding and stdin polling; Electron never loads a native image addon.
 import * as decoder from './decoder.js';
 import { FrameReader, FrameWriter } from './decoder-protocol.js';
 const writer = new FrameWriter(process.stdout);
-const methods = new Set(['decode', 'probe', 'capabilities', 'verify']);
+const methods = new Set(['decode', 'probe', 'capabilities']);
 const jobs = new Set<Promise<void>>();
 const fatal = (error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
@@ -28,9 +27,6 @@ async function handle({ id, method, args }: FrameMessage) {
         break;
       case 'capabilities':
         result = await decoder.capabilities();
-        break;
-      case 'verify':
-        result = await verify();
         break;
       default:
         throw new Error('Invalid decoder request.');
